@@ -59,13 +59,36 @@ body { margin: 0; font: 14px/1.5 Inter, system-ui, sans-serif; color: var(--ink)
 .panel ul.inside { display: block; margin: 0 0 8px; padding-left: 18px; list-style: disc; font-size: 13px; } .panel ul.inside li { margin: 2px 0; }
 .floors { align-items: center; font-size: 12px; color: var(--muted); margin: 6px 0; } .floors button { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 3px 10px; font: 600 12px Inter, sans-serif; cursor: pointer; } .floors button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .chips { display: flex; gap: 6px 12px; flex-wrap: wrap; font-size: 12px; margin-top: 4px; } .chips span { background: #F3F7F7; border-radius: 999px; padding: 2px 9px; font-weight: 600; }
-#toasts { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px; z-index: 20; pointer-events: none; }
+#alerts { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 15; pointer-events: none; }
+#toasts { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .toast { background: #FFF6E5; border: 1px solid #F0C27A; border-left: 5px solid #E07A1F; border-radius: 12px; padding: 10px 14px; font-size: 13px; box-shadow: 0 8px 24px #0002; transition: opacity .6s, transform .6s; } .toast.out { opacity: 0; transform: translateY(-8px); }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; } .two .fld.chk { margin: 4px 0; font-size: 12px; }
 ol.rank { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 4px; } ol.rank button { all: unset; cursor: pointer; display: flex; flex-direction: column; width: 100%; box-sizing: border-box; padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; } ol.rank button:hover { background: #F3F7F7; } ol.rank small { color: var(--muted); }
-#banner { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 15; padding: 8px 16px; border-radius: 999px; font: 700 13px Inter, sans-serif; pointer-events: none; display: none; max-width: min(640px, calc(100vw - 32px)); text-align: center; }
+#banner { padding: 8px 16px; border-radius: 999px; font: 700 13px Inter, sans-serif; pointer-events: none; display: none; max-width: min(640px, calc(100vw - 32px)); text-align: center; }
 #banner.bad { display: block; background: #C9372C; color: #fff; animation: pulse 1s infinite alternate; } #banner.warn { display: block; background: #FFF1D6; color: #8A4B00; border: 1px solid #F0C27A; } #banner.ok { display: block; background: #E7F6EE; color: #1E6B43; border: 1px solid #9ED3B4; }
 @keyframes pulse { to { box-shadow: 0 0 0 8px #C9372C44; } }
 body.danger::after { content: ''; position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px 30px #C9372C88; z-index: 4; animation: pulse2 1.2s infinite alternate; } @keyframes pulse2 { from { opacity: .55; } to { opacity: 1; } }
 .toast.guard { background: #E7F6EE; border-color: #9ED3B4; border-left-color: #2E9E5B; }
 table.safe { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; } table.safe th, table.safe td { text-align: right; padding: 4px 3px; border-bottom: 1px solid var(--line); vertical-align: top; } table.safe th:first-child, table.safe td:first-child { text-align: left; } table.safe small { color: var(--muted); font-weight: 400; }
+
+/* ---- responsive: phones and tablets in portrait (<= 900px) use a compact top bar, a compact HUD and a collapsible bottom sheet ---- */
+#ptoggle { display: none; }
+@media (max-width: 900px) {
+  .controls { top: 8px; left: 8px; bottom: auto; flex-direction: row; padding: 2px; }
+  .controls button { width: 32px; height: 32px; font-size: 16px; }
+  .credit { top: 8px; bottom: auto; left: 152px; right: 8px; padding: 4px 8px; font-size: 11px; line-height: 1.25; text-align: center; border-radius: 12px; }
+  .hud { top: 52px; left: 8px; right: 8px; width: auto; bottom: auto; padding: 8px 10px 6px; }
+  .hudtop { gap: 5px; font-size: 12px; } .hudtop b { font-size: 13px; } .hudtop #where { flex: 1 1 100%; order: 9; font-size: 11px; line-height: 1.2; } .hudtop button { padding: 3px 7px; font-size: 11px; }
+  .hudmain { margin-top: 4px; gap: 8px; } .gl { min-width: 84px; } .gl b { font-size: 30px; } .gl em { font-size: 10px; } #hudchart { height: 84px; }
+  .hudnote { display: none; } .chips { gap: 4px 6px; font-size: 11px; } .chips span { padding: 1px 7px; }
+  .panel { top: auto; bottom: 0; right: 0; left: 0; width: auto; max-height: var(--sheet, 36vh); border-radius: 14px 14px 0 0; padding: 14px 16px; transition: max-height .25s, padding .25s; }
+  .panel.collapsed { max-height: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; border-width: 0; }
+  #ptoggle { display: block; position: fixed; right: 10px; bottom: calc(var(--sheet, 36vh) + 6px); z-index: 7; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 12px; font: 600 12px Inter, sans-serif; box-shadow: 0 4px 12px #0002; cursor: pointer; }
+  body.pcollapsed #ptoggle { bottom: 8px; }
+  #alerts { top: auto; bottom: calc(var(--sheet, 36vh) + 44px); width: calc(100vw - 16px); } body.pcollapsed #alerts { bottom: 48px; }
+  .toast { font-size: 12px; padding: 8px 10px; } #banner { font-size: 12px; padding: 6px 12px; border-radius: 12px; }
+  .panel h2 { font-size: 17px; } .two { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) { .hudtop #clk { flex: 1 1 auto; } .chips span:nth-child(n+4) { display: none; } }
+@media (max-width: 900px) and (max-height: 700px) { :root { --sheet: 30vh; } .chips { display: none; } #hudchart { height: 64px; } .gl b { font-size: 26px; } }
+@media (max-width: 1000px) and (max-height: 520px) { :root { --sheet: 34vh; } #hudchart { display: none; } .gl { flex-direction: row; align-items: baseline; gap: 8px; } .gl em { display: none; } .hud { right: auto; width: min(420px, calc(100vw - 16px)); } .panel { left: auto; width: min(380px, 50vw); right: 0; max-height: calc(100vh - 16px); top: 8px; bottom: auto; border-radius: 14px 0 0 14px; } #ptoggle { top: 8px; bottom: auto; right: calc(min(380px, 50vw) + 8px); } body.pcollapsed #ptoggle { top: 8px; bottom: auto; right: 8px; } #alerts { top: auto; bottom: 46px; left: 8px; transform: none; width: min(420px, calc(100vw - 16px)); } body.pcollapsed #alerts { bottom: 46px; } .credit { top: auto; bottom: 8px; left: 8px; right: auto; } }

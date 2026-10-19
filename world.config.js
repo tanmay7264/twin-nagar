@@ -1,19 +1,19 @@
 // Twin Nagar: a dense Indian city district where a glucose digital twin lives a day-to-day life.
-// Grid 64 wide x 48 deep: 4 x 3 blocks of ~12.4 units separated by 3.2-wide roads (centre lines x = 16, 32, 48; z = 16, 32). Doors face +z (south).
+// Grid 64 x 64: 4 x 4 blocks of ~12.4 units separated by 3.2-wide roads (centre lines x = 16, 32, 48; z = 16, 32, 48). Doors face +z (south).
 export const GRID = {
   FH: 2.4,                               // storey height
   colx: [8.2, 24, 39.8, 55.6],           // block centre x
-  rowb: [14.4, 30.4, 46],                // block bottom (south edge) z
-  roadsV: [16, 32, 48], roadsH: [16, 32], roadW: 3.2,
-  blockX: [[2, 14.4], [17.6, 30.4], [33.6, 46.4], [49.6, 62]], blockZ: [[2, 14.4], [17.6, 30.4], [33.6, 46]],
-  hLines: [13.9, 29.9, 45.5],            // pedestrian lines along each block row's south sidewalk
+  rowb: [14.4, 30.4, 46, 62],            // block bottom (south edge) z
+  roadsV: [16, 32, 48], roadsH: [16, 32, 48], roadW: 3.2,
+  blockX: [[2, 14.4], [17.6, 30.4], [33.6, 46.4], [49.6, 62]], blockZ: [[2, 14.4], [17.6, 30.4], [33.6, 46], [49.6, 62]],
+  hLines: [13.9, 29.9, 45.5, 61.5],            // pedestrian lines along each block row's south sidewalk
   vLines: [13.8, 18.2, 29.8, 34.2, 45.8, 50.2],   // pedestrian lines along the vertical streets
 };
 const place = (r, c, w, d) => ({ x: GRID.colx[c], z: GRID.rowb[r] - 1.6 - d / 2, w, d });
 export const WORLD = {
   title: 'Twin Nagar',
   intro: 'A busy city district where Asha (58, type 2 diabetes) lives her day with a glucose digital twin. Follow her: buildings open up when she walks in. Then use the Twin Lab to try a healthier day before she does.',
-  size: 64, depth: 48,
+  size: 64, depth: 64,
   seed: 21,
   trees: 0,
   colors: {
@@ -34,6 +34,10 @@ export const WORLD = {
     { id: 'lab', name: 'Twin Lab', kicker: 'TRY IT ON THE TWIN FIRST', ...place(2, 1, 8, 6.4), floors: 2, color: '#66518A', wall: '#E6E1F0', roof: 'flat', blurb: 'Swap meals, add walks, a workout or yoga, drop the biscuit, then compare the whole day on Asha\'s twin before she tries it. Or let the twin rank the best single changes.', facts: [['Engine', 'Same ODE as the research twin']], inside: ['Ground floor: a holographic table drawing Asha\'s current day', 'First floor: servers and data walls'] },
     { id: 'ayur', name: 'Ayurveda & Yoga Centre', kicker: 'MORNING YOGA', ...place(2, 2, 7, 5.6), floors: 1, color: '#B8863B', wall: '#F2E6CF', blurb: 'An optional 35-minute morning yoga class. The twin models it as gentle exercise; stress and sleep benefits are not modelled.', facts: [['Modelled as', 'Gentle exercise (assumed)']], inside: ['A yoga class on mats led by an instructor, herbs on the shelves'] },
     { id: 'chaat', name: 'Chaat Corner', kicker: 'WEEKEND SNACK', ...place(2, 3, 6, 5), floors: 1, color: '#D9482B', wall: '#F7DAD0', blurb: 'The weekend snack stop. Samosa, pani puri and vada pav are fast, fried carbohydrates: a classic test for the twin.', facts: [['Usual', 'Samosa x2, 32 g carbs']], inside: ['A fryer and a pani-puri stall, customers on stools'] },
+    { id: 'hospital', name: 'City Hospital', kicker: 'IF IT GETS SERIOUS', ...place(3, 0, 9, 6.4), floors: 2, color: '#D64545', wall: '#F6E1E1', roof: 'flat', blurb: 'Where the twin sends Asha when glucose stays above 300 or she feels very unwell (thirst, vomiting, drowsiness). Emergency bay downstairs, ward upstairs.', facts: [['Twin rule', 'Persistent >300 or symptoms: go']], inside: ['Ground floor: emergency bay with monitors, a doctor and a nurse', 'First floor: ward beds with IV stands'] },
+    { id: 'temple', name: 'Temple & Community Hall', kicker: 'FESTIVAL PRASAD', ...place(3, 1, 8, 6), floors: 1, color: '#E08A1E', wall: '#F8E7C9', blurb: 'Evening aarti and a plate of prasad. Offered sweets are easy to forget to log: four laddus and a bowl of payasam can be 115 g of carbohydrate.', facts: [['Risk', 'Unlogged sweets']], inside: ['An altar with oil lamps, devotees on the carpet, a prasad plate'] },
+    { id: 'bakery', name: 'Sweet & Bakery', kicker: 'TEMPTATION', ...place(3, 2, 7, 5.6), floors: 1, color: '#C2557A', wall: '#F6DCE4', blurb: 'Cakes, pastries and fresh juice. Portions look small and are easy to under-log: a pastry and a juice can be twice what you wrote down.', facts: [['Risk', 'Under-logged portion']], inside: ['Display cases of cakes and pastries, a baker at the oven'] },
+    { id: 'cinema', name: 'Cineplex', kicker: 'MOVIE NIGHT', ...place(3, 3, 9, 6.4), floors: 1, color: '#34495E', wall: '#DCE1E8', roof: 'flat', blurb: 'Three hours sitting in the dark with a large popcorn and a cola: about 100 g of fast carbohydrate right before bed.', facts: [['Risk', 'Heavy late snack']], inside: ['A screen, rows of seats with an audience, popcorn in every lap'] },
   ],
 };
 
@@ -51,7 +55,7 @@ export const CITY = {
     'Brown rice + dal + sabzi': [60, 15, 8, 9], 'Ragi roti x2 + dal': [50, 13, 6, 9], 'Jowar roti x2 + sabzi': [45, 10, 6, 8],
     'Veg biryani (1 plate)': [80, 12, 18, 5], 'Curd rice': [45, 8, 6, 1], 'Biscuits + chai': [25, 3, 6, 1], 'Banana': [27, 1, 0, 3],
     'Sprouts chaat': [20, 10, 2, 7], 'Sweets x2 (mithai)': [35, 3, 12, 0], 'Aloo paratha x2': [68, 9, 18, 5],
-    'Samosa x2': [32, 6, 17, 3], 'Office party cake and cola': [110, 6, 28, 1], 'Festival thali (2 servings)': [125, 22, 28, 12], 'Juice (treating a false low)': [30, 0, 0, 0], 'Pani puri (6 pcs)': [30, 3, 6, 2], 'Vada pav': [45, 6, 13, 3],
+    'Samosa x2': [32, 6, 17, 3], 'Festival prasad (laddus)': [115, 6, 30, 2], 'Pastry and fruit juice': [85, 4, 16, 1], 'Large popcorn + cola': [105, 3, 14, 5], 'Office party cake and cola': [110, 6, 28, 1], 'Festival thali (2 servings)': [125, 22, 28, 12], 'Juice (treating a false low)': [30, 0, 0, 0], 'Pani puri (6 pcs)': [30, 3, 6, 2], 'Vada pav': [45, 6, 13, 3],
   },
   slots: {
     breakfast: ['Masala dosa', 'Idli x3 + sambar', 'Poha (1 plate)', 'Upma (1 bowl)', 'Moong dal chilla x2', 'Ragi roti x2 + dal', 'Aloo paratha x2'],

@@ -177,6 +177,45 @@ export function buildInteriors(ctx) {
       props.plate = plate(g, 0.2, a + 1.05, -d / 2 + 1.4);
       Object.assign(stations, { eat: { x: 0.2, y: a, z: 0.7, face: Math.PI, mode: 'sit-eat', seat: a + 0.5 }, idle: { x: 0.2, y: a, z: 0.7, face: Math.PI, mode: 'sit', seat: a + 0.5 } });
     }
+    if (z.id === 'hospital') {
+      const g0 = fl[0], g1 = fl[1], a = Y0(0), b = Y0(1);
+      for (const [bx, who] of [[-2.6, 0], [0.2, 1], [3.0, 2]]) { P(g0, 1.2, 0.5, 2.0, '#DDE3EA', bx, a, -d / 2 + 1.6); P(g0, 1.2, 0.1, 2.0, '#FFFFFF', bx, a + 0.5, -d / 2 + 1.6); P(g0, 0.06, 1.9, 1.6, '#9ED3B4', bx + 0.7, a, -d / 2 + 1.7);
+        const mon = P(g0, 0.6, 0.45, 0.05, '#101216', bx, a + 1.5, -d / 2 + 0.3); const ecg = canvasTex(128, 64, (c, ww, hh) => { c.fillStyle = '#031A12'; c.fillRect(0, 0, ww, hh); c.strokeStyle = '#33D17A'; c.lineWidth = 2; c.beginPath(); for (let k = 0; k < 128; k++) { const y = 36 - (k % 32 === 10 ? 22 : k % 32 === 12 ? -14 : 0); k ? c.lineTo(k, y) : c.moveTo(k, y); } c.stroke(); }); const mp = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.38), new THREE.MeshBasicMaterial({ map: ecg.t })); mp.position.set(bx, a + 1.72, -d / 2 + 0.34); g0.add(mp);
+        addActor(person(['#8A5CB1', '#C97B4A', '#4E8B6A'][who], who), 'lie', bx, a + 0.62, -d / 2 + 2.3, 0, null).g.rotation.x = -Math.PI / 2; }
+      addActor(person('#FFFFFF', 0), 'stand', -1.2, a, 0.6, Math.PI * 0.3, null); addActor(person('#2F9E8F', 1), 'stand', 1.6, a, 0.9, Math.PI * 1.2, null);
+      P(g0, 0.8, 0.9, 0.6, '#C9372C', 3.4, a, 1.8); const beat = P(g0, 0.1, 0.1, 0.1, '#FF4D4D', 3.4, a + 1.0, 1.8, true); ticks.push((dt, t) => beat.material.color.setHSL(0, 1, 0.45 + 0.25 * Math.sin(t * 8)));
+      for (let i = 0; i < 4; i++) { P(g1, 1.0, 0.45, 2.0, '#DDE3EA', -3.0 + i * 1.9, b, -d / 2 + 1.5); P(g1, 1.0, 0.1, 2.0, '#FFFFFF', -3.0 + i * 1.9, b + 0.45, -d / 2 + 1.5); P(g1, 0.05, 1.7, 0.05, '#B8BEC8', -2.3 + i * 1.9, b, -d / 2 + 0.7); if (i < 3) addActor(person(['#8A5CB1', '#C97B4A', '#4E8B6A'][i], i), 'lie', -3.0 + i * 1.9, b + 0.58, -d / 2 + 2.3, 0, null).g.rotation.x = -Math.PI / 2; }
+      addActor(person('#FFFFFF', 2), 'stand', 2.0, b, 1.4, Math.PI, null);
+    }
+    if (z.id === 'temple') {
+      const g = fl[0], a = Y0(0); P(g, w - 0.6, 0.04, d - 0.6, '#B5412F', 0, 0.02, 0.2);
+      P(g, 4.2, 0.7, 1.4, '#E8B04A', 0, a, -d / 2 + 1.0); P(g, 3.6, 0.1, 1.0, '#C9372C', 0, a + 0.7, -d / 2 + 1.0);
+      const idol = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.5, 6), M('#E0A92E')); idol.position.set(0, a + 1.5, -d / 2 + 1.0); g.add(idol); const crown = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), M('#F2C230')); crown.position.set(0, a + 2.4, -d / 2 + 1.0); g.add(crown);
+      const fl2 = [-1.3, 1.3].map(x => { const f = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), B('#FFB020')); f.scale.y = 1.6; f.position.set(x, a + 1.05, -d / 2 + 1.5); g.add(f); P(g, 0.3, 0.3, 0.3, '#B8863B', x, a + 0.7, -d / 2 + 1.5); return f; });
+      ticks.push((dt, t) => fl2.forEach((f, i) => { f.scale.set(1 + 0.15 * Math.sin(t * 9 + i), 1.6 + 0.3 * Math.sin(t * 7 + i * 2), 1); }));
+      const bell = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.3, 10), M('#C9A23A')); bell.position.set(2.8, a + 2.0, -d / 2 + 0.6); g.add(bell); ticks.push((dt, t) => { bell.rotation.z = Math.sin(t * 2.5) * 0.25; });
+      props.plate = plate(g, 1.1, a + 0.05, 0.6); 
+      addActor(person('#F2F2F0', 0), 'stand', -2.4, a, -0.4, 0, null); addActor(person('#E8A33A', 1), 'sit', -2.4, a, 1.4, Math.PI, a + 0.25); addActor(person('#8A5CB1', 2), 'sit', 2.8, a, 0.6, Math.PI, a + 0.25);
+      Object.assign(stations, { eat: { x: 1.1, y: a, z: 1.4, face: Math.PI, mode: 'sit-eat', seat: a + 0.25 }, idle: { x: 1.1, y: a, z: 1.4, face: Math.PI, mode: 'sit', seat: a + 0.25 } });
+    }
+    if (z.id === 'bakery') {
+      const g = fl[0], a = Y0(0), cols = ['#F4D6E0', '#E0A92E', '#8A5A3C', '#C2557A'];
+      P(g, 5.2, 1.0, 0.9, '#F2E8DC', 0.2, a, -d / 2 + 0.9); for (let k = 0; k < 6; k++) { P(g, 0.55, 0.3, 0.55, cols[k % 4], -2.0 + k * 0.85, a + 1.0, -d / 2 + 0.9); P(g, 0.55, 0.12, 0.55, '#FFFFFF', -2.0 + k * 0.85, a + 1.3, -d / 2 + 0.9); }
+      P(g, 5.4, 0.04, 1.0, '#BFDDF0', 0.2, a + 1.0, -d / 2 + 0.9, true).material.transparent = true;
+      P(g, 1.4, 1.4, 0.9, '#6B4A3A', -w / 2 + 1.0, a, -d / 2 + 0.7); const ov = P(g, 0.9, 0.5, 0.05, '#FF8A30', -w / 2 + 1.0, a + 0.5, -d / 2 + 1.2, true); ticks.push((dt, t) => ov.material.color.setHSL(0.07, 1, 0.5 + 0.1 * Math.sin(t * 4)));
+      addActor(person('#FFFFFF', 0), 'cook', -0.8, a, -d / 2 + 0.2, 0); for (const sx of [-1.4, 0.8, 2.6]) P(g, 0.4, 0.55, 0.4, '#C2557A', sx, a, 1.0);
+      addActor(person('#8A5CB1', 1), 'sit-eat', -1.4, a, 1.0, Math.PI, a + 0.55); props.plate = plate(g, 0.8, a + 1.35, -d / 2 + 1.5, '#F4D6E0');
+      Object.assign(stations, { eat: { x: 0.8, y: a, z: 1.0, face: Math.PI, mode: 'sit-eat', seat: a + 0.55 }, idle: { x: 0.8, y: a, z: 1.0, face: Math.PI, mode: 'sit', seat: a + 0.55 } });
+    }
+    if (z.id === 'cinema') {
+      const g = fl[0], a = Y0(0); P(g, w - 0.4, 0.04, d - 0.4, '#3A1F2B', 0, 0.02, 0);
+      const mov = canvasTex(256, 128, () => {}); const scr = new THREE.Mesh(new THREE.PlaneGeometry(6.2, 2.6), new THREE.MeshBasicMaterial({ map: mov.t })); scr.position.set(0, a + 1.9, -d / 2 + 0.25); g.add(scr);
+      ticks.push((dt, t) => { const c = mov.g; c.fillStyle = `hsl(${(t * 30) % 360},60%,${30 + 15 * Math.sin(t * 2)}%)`; c.fillRect(0, 0, 256, 128); c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.arc(128 + 60 * Math.sin(t * 0.8), 64 + 20 * Math.cos(t), 18, 0, 7); c.fill(); mov.t.needsUpdate = true; });
+      for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) { const sx = -3.3 + k * 1.3, sz = -0.6 + r * 1.5; P(g, 0.7, 0.55, 0.7, '#8A2B3F', sx, a, sz); P(g, 0.7, 0.7, 0.15, '#8A2B3F', sx, a + 0.3, sz + 0.35); if ((r + k) % 3 === 0 && !(r === 1 && k === 3)) addActor(person(['#8A5CB1', '#4E8B6A', '#C97B4A', '#6C8FB0'][(r + k) % 4], k), 'sit', sx, a, sz, 0, a + 0.5); }
+      Object.assign(stations, { eat: { x: -3.3 + 3 * 1.3, y: a, z: 0.9, face: 0, mode: 'sit-eat', seat: a + 0.5 }, idle: { x: -3.3 + 3 * 1.3, y: a, z: 0.9, face: 0, mode: 'sit', seat: a + 0.5 } });
+      props.plate = plate(g, 0.6, a + 0.85, 1.0, '#F6E7A8');
+      P(g, 1.6, 1.0, 0.7, '#B8863B', w / 2 - 1.2, a, d / 2 - 1.2); addActor(person('#C9372C', 0), 'stand', w / 2 - 1.2, a, d / 2 - 1.9, 0, null);
+    }
     cut.traverse(m => { if (m.isMesh) { m.userData.id = z.id; pickables.push(m); } });
     for (const k in stations) stations[k].floor = clamp(Math.round((stations[k].y - 0.07) / FH), 0, floors - 1);
     let curFloor = -1;
