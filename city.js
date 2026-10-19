@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { CITY, WORLD, GRID, DAYS } from './world.config.js';
 import { simulate, stateAt, ensemble, forecast, draws, metrics, slowFrac, THR, DANGER, SEVERE, beliefTrace, detect } from './twin.js';
 import { makeFigure, pose, sitY } from './figures.js';
+import { makeVehicle } from './cityscape.js';
 import { buildInteriors } from './interiors.js';
 
 const T0 = 300, T1 = 1740, SIM_SEED = 7, REAL = 5;           // day runs 05:00 -> 05:00; REAL = which posterior draw is "Asha's true body"
@@ -142,7 +143,7 @@ export function buildDay(plan0) {
     }
     const legDur = next && next.leg ? next.leg.dur : 0, end = next ? (next.arr - legDur) : T1 + 1;
     if (end > cur) add({ t0: cur, t1: end, kind: 'stay', place: b.place, pose: b.pose, label: b.label });
-    if (legDur) { add({ t0: end, t1: next.arr, kind: 'leg', poly: next.leg.poly, auto: next.leg.auto, from: b.place, to: next.place, label: `${next.leg.auto ? 'Auto ride' : 'Walking'} to ${zoneOf[next.place].name}` }); for (let m = end; m < next.arr; m++) ex[m] = Math.max(ex[m], next.leg.auto ? 0.05 : 0.6); }
+    if (legDur) { add({ t0: end, t1: next.arr, kind: 'leg', poly: next.leg.poly, auto: next.leg.auto, from: b.place, to: next.place, label: `${next.leg.auto ? 'Taxi ride' : 'Walking'} to ${zoneOf[next.place].name}` }); for (let m = end; m < next.arr; m++) ex[m] = Math.max(ex[m], next.leg.auto ? 0.05 : 0.6); }
   });
   segs.sort((a, b) => a.t0 - b.t0);
   segs.forEach((sg, i) => { const p = segs[i - 1], n = segs[i + 1]; sg.enter = !(p && p.kind === 'stay' && p.place === sg.place); sg.exit = !(n && n.kind === 'stay' && n.place === sg.place); });
@@ -202,17 +203,17 @@ export function initCity(ctx) {
 
   // figures: Asha is drawn large (and has a pin + halo) so she is easy to follow; bystanders are a little smaller
   const ASHA_S = 1.4;
-  const asha = makeFigure('#D6336C', ASHA_S, '#3A3F55'); scene.add(asha.g);
+  const asha = makeFigure('#D6336C', ASHA_S, '#3A3F55', '#C68E6A', '#8E8E93', 'bun'); scene.add(asha.g);
   const halo = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.8, 32), new THREE.MeshBasicMaterial({ color: '#0F8B8D', transparent: true, opacity: 0.9, side: THREE.DoubleSide })); halo.rotation.x = -Math.PI / 2; scene.add(halo);
-  const auto = new THREE.Group(); { const m = (c, r = 0.7) => new THREE.MeshStandardMaterial({ color: c, roughness: r }), bx = (w, h, d, c, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m(c)); o.position.set(x, y, z); o.castShadow = true; auto.add(o); return o; };
-    bx(1.5, 0.6, 2.3, '#F2C230', 0, 0.62, -0.1); bx(1.5, 0.1, 1.5, '#1F2937', 0, 2.05, -0.5); bx(0.08, 1.2, 0.08, '#1F2937', -0.7, 1.45, 0.15); bx(0.08, 1.2, 0.08, '#1F2937', 0.7, 1.45, 0.15); bx(0.7, 0.5, 0.5, '#1F2937', 0, 0.9, 0.95); bx(1.4, 0.5, 0.5, '#2D6A4F', 0, 1.0, -1.15);
-    for (const [x, z] of [[-0.7, -0.9], [0.7, -0.9], [0, 1.0]]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.2, 14), m('#111827')); wh.rotation.z = Math.PI / 2; wh.position.set(x, 0.28, z); auto.add(wh); } auto.visible = false; scene.add(auto); }
+  const auto = makeVehicle('taxi', '#F2C230', 1.2); auto.visible = false; scene.add(auto);          // Asha's yellow cab for long legs (she rides in the back, hidden)
+  const cabPos = new THREE.Vector3();
   const pin = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 14), new THREE.MeshBasicMaterial({ color: '#0F8B8D' })); pin.rotation.x = Math.PI; scene.add(pin);
-  const npcs = [], shirts = ['#8A9BB5', '#B5A58A', '#7FA58F', '#A58F9B', '#C9A05A', '#6C8FB0', '#9A7FB0', '#B07F7F'];
+  const npcs = [], shirts = ['#8A9BB5', '#B5A58A', '#7FA58F', '#A58F9B', '#C9A05A', '#6C8FB0', '#9A7FB0', '#B07F7F', '#222831', '#E8E6E0', '#C9372C', '#2F7A4B'];
   let rs = 5; const rr = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
   const ids = WORLD.zones.map(z => z.id);
-  for (let i = 0; i < 18; i++) {
-    const f = makeFigure(shirts[i % shirts.length], 1.0, ['#4A4F63', '#5A4A3A', '#3A4A5A'][i % 3], ['#C68E6A', '#A9714B', '#E0B48E'][i % 3]); scene.add(f.g);
+  const hairs = ['#1B1612', '#2B1D14', '#6B4A32', '#8E8E93', '#C9A05A', '#0F0F12'], skins = ['#C68E6A', '#A9714B', '#E0B48E', '#8D5A3B', '#F1C9A5', '#6F4A33'];
+  for (let i = 0; i < 36; i++) {
+    const f = makeFigure(shirts[i % shirts.length], 0.95 + (i % 4) * 0.04, ['#4A4F63', '#5A4A3A', '#3A4A5A', '#222831', '#6B6F7A'][i % 5], skins[(i * 5) % 6], hairs[(i * 7) % 6]); scene.add(f.g);
     const at0 = ids[Math.floor(rr() * ids.length)]; npcs.push({ f, at: at0, poly: null, u: 0, wait: rr() * 4, speed: 1.4 + rr() * 0.8, ph: rr() * 6 });
     const d = door(at0); f.g.position.copy(at(d[0] + (rr() - .5), d[1] + 0.4));
   }
@@ -426,11 +427,14 @@ export function initCity(ctx) {
     if (m < lastM - 1) fired = world.det.filter(d => d.t <= m).length; lastM = m;
     // ---- Asha: along a street / walking loop outside, or inside a building at her station (door -> entrance -> seat, and back out)
     let target, face = ashaFace, mode = 'stand', visible = true, rotX = 0, ins = null, seatY = null, groundY = 0.05;
-    auto.visible = false;
+    const cabWas = auto.visible; auto.visible = false;
     if (seg.kind === 'leg' || seg.kind === 'loop') {
       const p = seg.kind === 'leg' ? along(seg.poly, (m - seg.t0) / (seg.t1 - seg.t0)) : along(seg.poly, (((m - seg.t0) / (seg.t1 - seg.t0)) * seg.laps) % 1);
       target = at(p.x, p.z); mode = 'walk'; face = Math.atan2(p.dx, p.dz);
-      if (seg.auto) { mode = 'sit'; seatY = 0.95; auto.visible = true; auto.position.set(target.x, 0, target.z); auto.rotation.y = face; target = target.clone().add(new THREE.Vector3(0, 0, 0)); }
+      if (seg.auto) {                                                                         // ride the nearest road in the right-hand lane
+        const horiz = Math.abs(p.dx) > Math.abs(p.dz), lines = horiz ? GRID.roadsH : GRID.roadsV, c = horiz ? p.z : p.x, road = lines.reduce((b, v) => Math.abs(v - c) < Math.abs(b - c) ? v : b), s = horiz ? Math.sign(p.dx) || 1 : Math.sign(p.dz) || 1;
+        const want = horiz ? at(p.x, road + s * 0.8) : at(road - s * 0.8, p.z); if (!cabWas) cabPos.copy(want); cabPos.lerp(want, Math.min(1, dt * 6));
+        auto.visible = true; visible = false; auto.position.set(cabPos.x, 0.03, cabPos.z); auto.rotation.y = horiz ? (s > 0 ? 0 : Math.PI) : (s > 0 ? -Math.PI / 2 : Math.PI / 2); target = cabPos.clone().setY(0); mode = 'stand'; }
     } else {
       const I = INT[seg.place], dr = door(seg.place), outside = at(dr[0], dr[1]);
       const st = I && (I.stations[seg.pose] || I.stations.idle);
@@ -482,7 +486,7 @@ export function initCity(ctx) {
     // ---- day/night: sky, sun, and lit windows
     const hr = (m / 60) % 24, day = sstep(5.5, 7.5, hr) * (1 - sstep(18, 19.8, hr));
     if (Math.abs(day - lastLight) > 0.01) {
-      lastLight = day; sun.intensity = 0.3 + 1.8 * day; hemi.intensity = 0.6 + 0.85 * day; for (const mt of lit) mt.emissiveIntensity = (1 - day) * 1.1;
+      lastLight = day; sun.intensity = 0.3 + 1.8 * day; hemi.intensity = 0.6 + 0.85 * day; for (const mt of lit) mt.emissiveIntensity = (1 - day) * 1.1 * (mt.userData.k ?? 1);
       const c = (a, b) => new THREE.Color(a).lerp(new THREE.Color(b), day).getStyle(); document.documentElement.style.setProperty('--sky1', c('#141A33', '#DCE8F5')); document.documentElement.style.setProperty('--sky2', c('#2A2F52', '#EEF1F8'));
     }
     // ---- badge over Asha

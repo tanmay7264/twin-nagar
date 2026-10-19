@@ -15,9 +15,10 @@ python3 -m http.server 8790        # in this folder, then open http://localhost:
 Needs internet for Three.js (CDN). Press Space to pause, "Follow Asha" to track her, 1x/2x/4x for speed. Deep links: `#lab`, `#cafe`, ...
 
 ## What's in the city now
+- **A New York street scene**: yellow cabs, sedans, SUVs, delivery trucks and buses that obey working traffic lights and queue behind each other; brick tenements with fire escapes, water tanks and storefronts; glass and art-deco towers with setbacks and an Empire-State-style spire; hydrants, bins, benches, mailboxes, bike docks, bus shelters, subway entrances, hot-dog carts, newsstands, steaming manholes and rooftop billboards; rounded, jointed people with elbows, knees, hands, shoes and varied hair, clothes and skin tones.
 - **16 places** in a 4x4 grid (one is the park): Home, Udupi Café, Medplus Pharmacy, Tech Office, Happiest Health Clinic, Lake Park, Fresh Mart, Bazaar Lunch, Community Gym, Twin Lab, Ayurveda & Yoga Centre, Chaat Corner, City Hospital, Temple & Community Hall, Sweet & Bakery, Cineplex. Every building (except the open-air park) opens into a furnished cutaway with people inside.
 - **Two kinds of day** (button in the HUD): a weekday with office hours, and a weekend with a clinic check-up, pharmacy refill, bazaar lunch, groceries, a chaat snack and a park walk.
-- **More activities** you can switch on in the Twin Lab: morning yoga, gym workout (30/45 min), post-lunch walk, after-dinner stroll, grocery trip, evening walk length, and 7 to 8 meal choices per slot. Long trips are made by auto-rickshaw.
+- **More activities** you can switch on in the Twin Lab: morning yoga, gym workout (30/45 min), post-lunch walk, after-dinner stroll, grocery trip, evening walk length, and 7 to 8 meal choices per slot. Long trips are made by yellow cab.
 - **Twin alerts**: when the 2-hour forecast says a spike is likely, a toast appears with what a 15-minute walk would change, and Asha's halo turns red.
 - **Live stats**: steps, sitting time, carbs eaten, time in range so far, alerts.
 - **Rank the best single changes**: the twin simulates every single swap or activity and ranks them by time-in-range gain; apply one, or combine the top three from different areas.

@@ -47,7 +47,7 @@ const flat = (x, z, w, d, y, c) => scene.add(mesh(box(w, 0.02, d), mat(c), x - C
 let seed = WORLD.seed || 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647; // same world every visit
 
 /* ---------- Camera: orthographic isometric, tilt locked, spin allowed ---------- */
-const FR = N * 0.55, OFFSET = new THREE.Vector3(60, 52, 60), HOME_ZOOM = 0.9;
+const FR = N * 0.55, OFFSET = new THREE.Vector3(60, 52, 60), HOME_ZOOM = 0.82;
 const camera = new THREE.OrthographicCamera(-FR, FR, FR, -FR, 30, 240);
 camera.position.copy(OFFSET);
 const controls = new MapControls(camera, canvas);
