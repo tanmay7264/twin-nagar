@@ -4,6 +4,8 @@ A dense isometric 3D city district (3x3 blocks, roads with markings, traffic, a 
 while a **glucose digital twin** follows her. At the **Twin Lab** you change her day (swap meals, add walks, drop the 4:30 biscuit) and the twin
 shows the whole-day result, with uncertainty bands, *before* she tries it. Then you can let Asha follow the plan and watch the day replay.
 
+**Live:** <https://tanmay7264.github.io/twin-nagar/> · **Research twin dashboard:** <https://glucose-digital-twin.onrender.com> ([repo](https://github.com/tanmay7264/glucose-digital-twin))
+
 Built with Tanmay's BM Ecosystem Builder (credit is part of the page).
 
 ## Run
