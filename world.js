@@ -7,8 +7,8 @@ import { makeZone, buildCity } from './cityscape.js';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const N = WORLD.size, C = N / 2;
-const at = (x, z, y = 0) => new THREE.Vector3(x - C, y, z - C);   // grid units 0..N, centred at the origin
+const N = WORLD.size, C = N / 2, D = WORLD.depth || N, CZ = D / 2;       // N wide (x), D deep (z)
+const at = (x, z, y = 0) => new THREE.Vector3(x - C, y, z - CZ);   // grid units 0..N, centred at the origin
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // Required credit (Tanmay's BM Ecosystem Builder). The world refuses to run if it is removed, hidden or changed.
@@ -43,7 +43,7 @@ const mats = new Map();
 const mat = (c, key = c) => { if (!mats.has(key)) mats.set(key, new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 })); return mats.get(key); };
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 const mesh = (geo, m, x = 0, y = 0, z = 0, shadow = true) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = shadow; o.receiveShadow = true; return o; };
-const flat = (x, z, w, d, y, c) => scene.add(mesh(box(w, 0.02, d), mat(c), x - C + w / 2, y, z - C + d / 2, false));
+const flat = (x, z, w, d, y, c) => scene.add(mesh(box(w, 0.02, d), mat(c), x - C + w / 2, y, z - CZ + d / 2, false));
 let seed = WORLD.seed || 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647; // same world every visit
 
 /* ---------- Camera: orthographic isometric, tilt locked, spin allowed ---------- */
@@ -62,10 +62,10 @@ Object.assign(sun.shadow.camera, { left: -N * 0.8, right: N * 0.8, top: N * 0.8,
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.02; scene.add(sun);
 
 /* ---------- Ground: presentation slab like an architect's model (layers never coplanar = no z-fight flicker) ---------- */
-const SLAB = N + 10;
-scene.add(mesh(box(SLAB, 0.06, SLAB), mat(WORLD.colors.ground), 0, -0.03, 0, false));
-scene.add(mesh(box(SLAB + 0.04, 0.08, SLAB + 0.04), mat(WORLD.colors.trim), 0, -0.1, 0, false));
-scene.add(mesh(box(SLAB, 0.9, SLAB), mat('#F3EFE7'), 0, -0.6, 0));
+const SLABX = N + 10, SLABZ = D + 10;
+scene.add(mesh(box(SLABX, 0.06, SLABZ), mat(WORLD.colors.ground), 0, -0.03, 0, false));
+scene.add(mesh(box(SLABX + 0.04, 0.08, SLABZ + 0.04), mat(WORLD.colors.trim), 0, -0.1, 0, false));
+scene.add(mesh(box(SLABX, 0.9, SLABZ), mat('#F3EFE7'), 0, -0.6, 0));
 { const floor = mesh(new THREE.PlaneGeometry(400, 400), mat(WORLD.colors.floor), 0, -1.2, 0, false); floor.rotation.x = -Math.PI / 2; scene.add(floor); }
 for (const [x, z, w, d, c] of WORLD.areas || []) flat(x, z, w, d, 0.006, c);            // lawns, plazas, water, soil…
 for (const [x, z, w, d] of WORLD.paths || []) { flat(x - 0.07, z - 0.07, w + 0.14, d + 0.14, 0.011, '#CDBFA6'); flat(x, z, w, d, 0.015, WORLD.colors.path); }
@@ -81,7 +81,7 @@ function signTexture(text, colour) {
   g.fillText(text.toUpperCase(), 320, 58, 600);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
-const cityCtx = { THREE, scene, at, mat, mesh, box, flat, C, N, rnd, pickables, objects, signTexture };
+const cityCtx = { THREE, scene, at, mat, mesh, box, flat, C, N, D, rnd, pickables, objects, signTexture };
 for (const z of WORLD.zones) makeZone(z, cityCtx);
 const fabric = buildCity(cityCtx);
 
@@ -189,7 +189,7 @@ new ResizeObserver(resize).observe(canvas); resize();
 camera.zoom = HOME_ZOOM; camera.updateProjectionMatrix();
 
 const SIM_PLAYING = () => city.playing();
-const v = new THREE.Vector3(), clock = new THREE.Clock(), BOUND = N * 0.55;
+const v = new THREE.Vector3(), clock = new THREE.Clock(), BOUND = N * 0.55, BOUNDZ = D * 0.55;
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
   if (anim) {                                              // 0.9s cubic ease-out
@@ -204,7 +204,7 @@ renderer.setAnimationLoop(() => {
   city.update(dt, t, canvas.clientWidth, canvas.clientHeight);
   const before = controls.target.clone();                  // keep the world on screen
   controls.target.x = THREE.MathUtils.clamp(controls.target.x, -BOUND, BOUND);
-  controls.target.z = THREE.MathUtils.clamp(controls.target.z, -BOUND, BOUND);
+  controls.target.z = THREE.MathUtils.clamp(controls.target.z, -BOUNDZ, BOUNDZ);
   camera.position.add(controls.target.clone().sub(before));
   controls.update();
   if (!reduceMotion) { pin.position.y = Math.sin(t * 2.4) * 0.12; ring.material.opacity = 0.35 + Math.sin(t * 2.4) * 0.25; }

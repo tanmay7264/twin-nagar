@@ -110,9 +110,10 @@ export function buildInteriors(ctx) {
       P(g0, 1.4, 0.9, 0.7, '#DDE3EA', -2.8, a, -1.5); const an = P(g0, 0.7, 0.3, 0.4, '#2F3640', -2.8, a + 0.9, -1.5); const led = P(g0, 0.3, 0.06, 0.02, '#33D17A', -2.8, a + 1.05, -1.28, true); ticks.push((dt, t) => led.material.color.setHSL(0.38, 0.8, 0.45 + 0.2 * Math.sin(t * 3)));
       const cgm = canvasTex(256, 128, (cc, ww, hh) => { cc.fillStyle = '#0D1B2A'; cc.fillRect(0, 0, ww, hh); cc.strokeStyle = '#4FD1C5'; cc.lineWidth = 3; cc.beginPath(); for (let i = 0; i < 256; i += 4) cc.lineTo(i, 80 - 25 * Math.sin(i / 25) - 10 * Math.sin(i / 8)); cc.stroke(); cc.fillStyle = '#fff'; cc.font = 'bold 16px Inter,Arial'; cc.fillText('CGM reader  14-day patch', 10, 18); });
       desk(g1, 1.4, b, -1.1, 2.0, 0.9); const rd = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.45), new THREE.MeshBasicMaterial({ map: cgm.t })); rd.position.set(1.4, b + 1.15, -1.55); g1.add(rd);
-      addActor(person('#FFFFFF', 0), 'sit-work', 1.4, b, -1.5, 0, b + 0.46); chair(g1, 1.4, b, -1.5); chair(g1, 1.4, b, -0.1); addActor(person('#8A5CB1', 1), 'sit', 1.4, b, -0.1, Math.PI, b + 0.46);
+      addActor(person('#FFFFFF', 0), 'sit-work', 1.4, b, -1.5, 0, b + 0.46); chair(g1, 1.4, b, -1.5); chair(g1, 1.4, b, -0.1); addActor(person('#8A5CB1', 1), 'stand', 3.1, b, 0.4, Math.PI * 1.2, null);
       P(g1, 1.0, 0.5, 2.0, '#DDE3EA', -2.4, b, 0.6); P(g1, 1.0, 0.1, 2.0, '#2F9E8F', -2.4, b + 0.5, 0.6); addActor(person('#2F9E8F', 2), 'stand', -1.2, b, 0.6, -Math.PI / 2, null);
       P(g1, 0.6, 0.9, 3.0, '#E9E4D8', -w / 2 + 0.5, b, -0.2); const cf = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.15, 16), M('#9AA3B0')); cf.position.set(-w / 2 + 0.5, b + 1.0, -0.2); g1.add(cf); ticks.push((dt, t) => { cf.rotation.y = t * 6; });
+      Object.assign(stations, { idle: { x: 1.4, y: b, z: -0.1, face: Math.PI, mode: 'sit', seat: b + 0.46 } });
     }
     if (z.id === 'gym') {
       const g = fl[0], a = Y0(0); P(g, w, 0.04, d, '#3A3F4A', 0, 0.02, 0);
@@ -123,6 +124,7 @@ export function buildInteriors(ctx) {
       for (const kx of [0, 0.5, 1.0]) { const kb = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), M('#2A2E36')); kb.position.set(1.6 + kx, a + 0.15, 1.8); g.add(kb); }
       addActor(person('#8D63B8', 2), 'stand', 3.0, a, 1.2, Math.PI * 1.1, null);
       ticks.push((dt, t) => belts.forEach(b => { b.material.color.setHSL(0, 0, 0.1 + 0.03 * Math.sin(t * 12)); }));
+      Object.assign(stations, { run: { x: 2.5, y: a + 0.2, z: -d / 2 + 1.6, face: 0, mode: 'run' }, idle: { x: 2.5, y: a + 0.2, z: -d / 2 + 1.6, face: 0, mode: 'run' } });
     }
     if (z.id === 'lab') {
       const g0 = fl[0], g1 = fl[1], a = Y0(0), b = Y0(1);
@@ -145,6 +147,35 @@ export function buildInteriors(ctx) {
       const smoke = [0, 1, 2].map(i => { const s = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.5 })); g.add(s); return s; });
       ticks.push((dt, t) => smoke.forEach((s, i) => { const u = (t * 0.3 + i / 3) % 1; s.position.set(3.0 + Math.sin(u * 5 + i) * 0.15, a + 0.4 + u * 1.4, -1.4); s.material.opacity = 0.5 * (1 - u); s.scale.setScalar(0.8 + u * 1.5); }));
       plant(g, w / 2 - 0.6, a, -d / 2 + 0.7);
+      Object.assign(stations, { yoga: { x: 2.4, y: a + 0.04, z: 0.9, face: Math.PI, mode: 'yoga' }, idle: { x: 2.4, y: a + 0.04, z: 0.9, face: Math.PI, mode: 'yoga' } });
+    }
+    if (z.id === 'pharmacy') {
+      const g = fl[0], a = Y0(0);
+      P(g, 4.4, 1.0, 0.8, '#E9E4D8', 0.6, a, -d / 2 + 1.5); P(g, 4.5, 0.05, 0.9, '#2E7D6B', 0.6, a + 1.0, -d / 2 + 1.5); addActor(person('#FFFFFF', 0), 'stand', 0.6, a, -d / 2 + 0.85, 0, null);
+      for (let i = 0; i < 5; i++) { P(g, 1.1, 2.0, 0.4, '#C9D2D6', -2.6 + i * 1.25, a, -d / 2 + 0.3); for (let k = 0; k < 4; k++) for (let j = 0; j < 3; j++) P(g, 0.3, 0.22, 0.3, ['#E0E7EE', '#2E7D6B', '#E0A92E', '#C9372C'][(k + j + i) % 4], -2.95 + i * 1.25 + j * 0.33, a + 0.35 + k * 0.42, -d / 2 + 0.55); }
+      const cross = P(g, 0.9, 0.9, 0.06, '#33D17A', -w / 2 + 0.3, a + 1.8, 0.6, true); ticks.push((dt, t) => cross.material.color.setHSL(0.38, 0.8, 0.5 + 0.15 * Math.sin(t * 3)));
+      P(g, 0.9, 0.9, 0.9, '#F2F2F0', 2.3, a, 1.0); P(g, 0.7, 0.2, 0.5, '#2E7D6B', 2.3, a + 0.9, 1.0); P(g, 0.25, 0.05, 0.15, '#33D17A', 2.3, a + 1.12, 1.0, true);
+      addActor(person('#8A5CB1', 1), 'stand', -2.0, a, 1.4, Math.PI * 0.9, null);
+      Object.assign(stations, { idle: { x: 0.6, y: a, z: -d / 2 + 2.4, face: 0 + Math.PI, mode: 'stand' } });
+    }
+    if (z.id === 'mart') {
+      const g = fl[0], a = Y0(0), goods = ['#C9372C', '#E0A92E', '#6B8F5E', '#F4F0E6', '#8A5A3C', '#2F6FB1'];
+      for (let r = 0; r < 3; r++) { P(g, 7.0, 1.5, 0.5, '#C9D2D6', -0.4, a, -1.9 + r * 1.9); for (let k = 0; k < 12; k++) P(g, 0.4, 0.28, 0.4, goods[(k + r) % 6], -3.5 + k * 0.58, a + 0.3 + (k % 3) * 0.4, -1.9 + r * 1.9); }
+      P(g, 1.6, 0.9, 0.7, '#8A5A3C', w / 2 - 1.3, a, d / 2 - 1.0); addActor(person('#D79B1E', 0), 'stand', w / 2 - 1.3, a, d / 2 - 1.8, 0, null);
+      P(g, 0.8, 0.5, 0.5, '#B8BEC8', -3.8, a + 0.4, 1.5); P(g, 0.9, 0.04, 0.5, '#6B7280', -3.8, a + 0.9, 1.5);
+      addActor(person('#4E8B6A', 2), 'stand', 1.0, a, 0.0, Math.PI * 0.5, null); addActor(person('#C97B4A', 1), 'stand', 3.0, a, 1.3, Math.PI, null);
+      Object.assign(stations, { idle: { x: -1.4, y: a, z: 0.0, face: -Math.PI / 2, mode: 'stand' }, shop: { x: -1.4, y: a, z: 0.0, face: -Math.PI / 2, mode: 'cook' } });
+    }
+    if (z.id === 'chaat') {
+      const g = fl[0], a = Y0(0);
+      P(g, 3.6, 1.0, 0.9, '#8A5A3C', -0.4, a, -d / 2 + 0.8); P(g, 3.8, 0.06, 1.0, '#E8D9BF', -0.4, a + 1.0, -d / 2 + 0.8); P(g, 0.9, 0.4, 0.8, '#2A2A2A', -1.4, a + 1.06, -d / 2 + 0.8); P(g, 3.6, 0.1, 1.1, '#D9482B', -0.4, a + 2.0, -d / 2 + 1.0);
+      const sm = [0, 1, 2].map(() => { const s = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.5 })); g.add(s); return s; });
+      ticks.push((dt, t) => sm.forEach((s, i) => { const u = (t * 0.5 + i / 3) % 1; s.position.set(-1.4, a + 1.5 + u * 0.7, -d / 2 + 0.8); s.material.opacity = 0.5 * (1 - u); s.scale.setScalar(0.7 + u); }));
+      addActor(person('#F2F2F0', 0), 'cook', -0.4, a, -d / 2 + 0.2, 0);
+      for (const sx of [-1.4, 0.2, 1.8]) { P(g, 0.4, 0.5, 0.4, '#C9372C', sx, a, 0.7); }
+      addActor(person('#8A5CB1', 1), 'sit-eat', -1.4, a, 0.7, Math.PI, a + 0.5); addActor(person('#4E8B6A', 2), 'sit-eat', 1.8, a, 0.7, Math.PI, a + 0.5);
+      props.plate = plate(g, 0.2, a + 1.05, -d / 2 + 1.4);
+      Object.assign(stations, { eat: { x: 0.2, y: a, z: 0.7, face: Math.PI, mode: 'sit-eat', seat: a + 0.5 }, idle: { x: 0.2, y: a, z: 0.7, face: Math.PI, mode: 'sit', seat: a + 0.5 } });
     }
     cut.traverse(m => { if (m.isMesh) { m.userData.id = z.id; pickables.push(m); } });
     for (const k in stations) stations[k].floor = clamp(Math.round((stations[k].y - 0.07) / FH), 0, floors - 1);

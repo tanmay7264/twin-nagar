@@ -17,20 +17,20 @@ export function stepMin(s, th, gb, e) {                // in place
 export const fasting = gb => Float64Array.of(gb, 0, 0, 0, 0, 0);
 
 // events: [{t (minute), c (g carbs), sl (slow fraction), slot, m (portion multiplier, default 1)}]; ex[t] = exercise intensity 0..1
-export function simulate({ events, ex, th, gb, t0, t1, mult = {} }) {
+export function simulate({ events, ex, th, gb, t0, t1, mult = {}, siFn = null }) {
   const s = fasting(gb), out = new Float32Array(t1 - t0 + 1), by = new Map();
   for (const ev of events) (by.get(ev.t) || by.set(ev.t, []).get(ev.t)).push(ev);
   for (let t = t0; t <= t1; t++) {
     for (const ev of by.get(t) || []) { const c = ev.c * (mult[ev.slot] ?? 1); s[2] += c * (1 - ev.sl); s[4] += c * ev.sl; }
-    out[t - t0] = s[0]; stepMin(s, th, gb, ex[t] || 0);
+    out[t - t0] = s[0]; stepMin(s, siFn ? [th[0] * siFn(t), th[1], th[2]] : th, gb, ex[t] || 0);
   }
   return { trace: out, state: s };
 }
 // state of the simulation at minute t (needed to continue forecasts from "now")
-export function stateAt({ events, ex, th, gb, t0, t, mult = {} }) {
+export function stateAt({ events, ex, th, gb, t0, t, mult = {}, siFn = null }) {
   const s = fasting(gb), by = new Map();
   for (const ev of events) (by.get(ev.t) || by.set(ev.t, []).get(ev.t)).push(ev);
-  for (let m = t0; m < t; m++) { for (const ev of by.get(m) || []) { const c = ev.c * (mult[ev.slot] ?? 1); s[2] += c * (1 - ev.sl); s[4] += c * ev.sl; } stepMin(s, th, gb, ex[m] || 0); }
+  for (let m = t0; m < t; m++) { for (const ev of by.get(m) || []) { const c = ev.c * (mult[ev.slot] ?? 1); s[2] += c * (1 - ev.sl); s[4] += c * ev.sl; } stepMin(s, siFn ? [th[0] * siFn(m), th[1], th[2]] : th, gb, ex[m] || 0); }
   return s;
 }
 
@@ -45,9 +45,9 @@ export function draws(base, sd, n, seed, cap = 0.7) {
   return out;
 }
 export function metrics(trace) {
-  let inr = 0, above = 0, below = 0, peak = 0, sum = 0;
-  for (const g of trace) { if (g >= 70 && g <= THR) inr++; if (g > THR) above++; if (g < 70) below++; if (g > peak) peak = g; sum += g; }
-  const n = trace.length; return { tir: inr / n * 100, above, below, peak, mean: sum / n };
+  let inr = 0, above = 0, below = 0, peak = 0, sum = 0, a250 = 0, a300 = 0;
+  for (const g of trace) { if (g >= 70 && g <= THR) inr++; if (g > THR) above++; if (g > 250) a250++; if (g > 300) a300++; if (g < 70) below++; if (g > peak) peak = g; sum += g; }
+  const n = trace.length; return { tir: inr / n * 100, above, below, peak, mean: sum / n, a250, a300 };
 }
 const q = (a, p) => { const b = Float64Array.from(a).sort(); return b[Math.min(b.length - 1, Math.floor(p * (b.length - 1) + 0.5))]; };
 export function ensemble({ events, ex, base, sd, gb, t0, t1, n = 40, seed = 7 }) {
@@ -57,9 +57,34 @@ export function ensemble({ events, ex, base, sd, gb, t0, t1, n = 40, seed = 7 })
   return { p5, p50, p95, traces, metrics: traces.map(metrics) };
 }
 // 2-h forecast from the current state (future meals/activity unknown): median + 5/95 band + P(exceed 180 within the horizon)
-export function forecast({ state, base, sd, gb, horizon = 120, n = 30, seed = 3 }) {
-  const D = draws(base, sd, n, seed), runs = D.map(d => { const s = Float64Array.from(state), o = new Float32Array(horizon + 1); o[0] = s[0]; for (let i = 1; i <= horizon; i++) { stepMin(s, d.th, gb, 0); o[i] = s[0]; } return o; });
+export function forecast({ state, base, sd, gb, horizon = 120, n = 30, seed = 3, ex = null }) {
+  const D = draws(base, sd, n, seed), runs = D.map(d => { const s = Float64Array.from(state), o = new Float32Array(horizon + 1); o[0] = s[0]; for (let i = 1; i <= horizon; i++) { stepMin(s, d.th, gb, ex ? ex[i - 1] || 0 : 0); o[i] = s[0]; } return o; });
   const p5 = [], p50 = [], p95 = [], col = new Float64Array(n);
   for (let i = 0; i <= horizon; i++) { for (let k = 0; k < n; k++) col[k] = runs[k][i]; p5.push(q(col, .05)); p50.push(q(col, .5)); p95.push(q(col, .95)); }
   return { p5, p50, p95, pExceed: runs.filter(r => r.some(g => g > THR)).length / n };
+}
+
+// ---- the twin's safeguards: compare what the CGM reads with what the twin expects from the LOGGED meals and activity
+export const DANGER = 250, SEVERE = 300;
+// beliefTrace: the twin's own expectation (logged events only, usual body parameters)
+export function beliefTrace({ events, ex, th, gb, t0, t1 }) { return simulate({ events: events.filter(e => !e.hidden), ex, th, gb, t0, t1 }).trace; }
+// detect: returns alerts [{t, type, ...}] in time order. reading = what the CGM shows; belief = beliefTrace.
+export function detect({ reading, belief, events, t0 }) {
+  const n = reading.length, r = i => reading[i] - belief[i], out = [], at = i => t0 + i;
+  let sensorT = -1e9, driftDone = false, unlogT = -1e9;
+  for (let i = 15; i < n; i++) {
+    const res = r(i);
+    // (1) sensor artifact: abrupt drop the twin cannot explain
+    if (at(i) - sensorT > 240 && reading[i] - reading[i - 15] < -40 && belief[i] - reading[i] > 45) { sensorT = at(i); out.push({ t: at(i), type: 'sensor', reading: reading[i], expected: belief[i] }); }
+    // (2) unlogged carbohydrate: fast unexplained rise, no logged meal in the last 90 minutes
+    const recentMeal = events.some(e => !e.hidden && at(i) - e.t >= 0 && at(i) - e.t < 90);
+    if (at(i) - unlogT > 120 && !recentMeal && res > 28 && res - r(i - 10) > 12) { unlogT = at(i); out.push({ t: at(i), type: 'unlogged', excess: res }); }
+  }
+  const heavyT = []; { const lg = events.filter(e => !e.hidden).sort((a, b) => a.t - b.t); for (let k = 0; k < lg.length; k++) { let c = lg[k].c, j = k + 1; while (j < lg.length && lg[j].t - lg[k].t < 40) c += lg[j++].c; if (c >= 100) heavyT.push(lg[k].t); } }
+  // (3) drift: unexplained excess that persists for 20 minutes (the body is only visible to the twin after meals, when insulin acts) (the body is responding differently)
+  for (let i = 20; i < n && !driftDone; i++) { let mn = 1e9, sum = 0; for (let k = i - 20; k <= i; k++) { const v = r(k); mn = Math.min(mn, v); sum += v; } if (mn > 10 && sum / 21 > 22 && !heavyT.some(h => at(i) >= h && at(i) - h < 180) && !out.some(o => o.type === 'unlogged' && at(i) - o.t < 240)) { driftDone = true; out.push({ t: at(i), type: 'drift', excess: sum / 21 }); } }
+  // (4) heavy meal: a logged meal whose forecast crosses the danger line
+  const logged = events.filter(e => !e.hidden).sort((a, b) => a.t - b.t);   // clusters of meals within 40 minutes count together
+  for (let k = 0; k < logged.length; k++) { let c = logged[k].c, j = k + 1; if (k && logged[k].t - logged[k - 1].t < 40) continue; while (j < logged.length && logged[j].t - logged[k].t < 40) c += logged[j++].c; if (c >= 100) out.push({ t: logged[k].t, type: 'heavy', c, name: logged[k].name + (j - k > 1 ? ' + dessert' : ''), slot: logged[k].slot }); }
+  return out.sort((a, b) => a.t - b.t);
 }
