@@ -55,18 +55,39 @@ export const CITY = {
     'Brown rice + dal + sabzi': [60, 15, 8, 9], 'Ragi roti x2 + dal': [50, 13, 6, 9], 'Jowar roti x2 + sabzi': [45, 10, 6, 8],
     'Veg biryani (1 plate)': [80, 12, 18, 5], 'Curd rice': [45, 8, 6, 1], 'Biscuits + chai': [25, 3, 6, 1], 'Banana': [27, 1, 0, 3],
     'Sprouts chaat': [20, 10, 2, 7], 'Sweets x2 (mithai)': [35, 3, 12, 0], 'Aloo paratha x2': [68, 9, 18, 5],
-    'Samosa x2': [32, 6, 17, 3], 'Festival prasad (laddus)': [115, 6, 30, 2], 'Pastry and fruit juice': [85, 4, 16, 1], 'Large popcorn + cola': [105, 3, 14, 5], 'Office party cake and cola': [110, 6, 28, 1], 'Festival thali (2 servings)': [125, 22, 28, 12], 'Juice (treating a false low)': [30, 0, 0, 0], 'Pani puri (6 pcs)': [30, 3, 6, 2], 'Vada pav': [45, 6, 13, 3],
+    'Samosa x2': [32, 6, 17, 3], 'Deadline pizza and cola': [105, 14, 28, 4], 'Wedding buffet (biryani, sweets, soft drink)': [150, 14, 38, 6], 'Late-night chips and cola': [60, 4, 22, 3], 'Family feast (biryani, raita, sweets)': [95, 14, 26, 5], 'Festival prasad (laddus)': [115, 6, 30, 2], 'Pastry and fruit juice': [85, 4, 16, 1], 'Large popcorn + cola': [105, 3, 14, 5], 'Office party cake and cola': [110, 6, 28, 1], 'Festival thali (2 servings)': [125, 22, 28, 12], 'Juice (treating a false low)': [30, 0, 0, 0], 'Pani puri (6 pcs)': [30, 3, 6, 2], 'Vada pav': [45, 6, 13, 3],
   },
   slots: {
     breakfast: ['Masala dosa', 'Idli x3 + sambar', 'Poha (1 plate)', 'Upma (1 bowl)', 'Moong dal chilla x2', 'Ragi roti x2 + dal', 'Aloo paratha x2'],
-    lunch: ['White rice 1 cup + dal + sabzi', 'Brown rice + dal + sabzi', 'Roti x2 + dal + sabzi', 'Ragi roti x2 + dal', 'Jowar roti x2 + sabzi', 'Veg biryani (1 plate)', 'Curd rice'],
+    lunch: ['White rice 1 cup + dal + sabzi', 'Brown rice + dal + sabzi', 'Roti x2 + dal + sabzi', 'Ragi roti x2 + dal', 'Jowar roti x2 + sabzi', 'Veg biryani (1 plate)', 'Curd rice', 'Moong dal chilla x2', 'Family feast (biryani, raita, sweets)'],
     snack: ['Biscuits + chai', 'Samosa x2', 'Pani puri (6 pcs)', 'Vada pav', 'Sprouts chaat', 'Banana', 'Sweets x2 (mithai)', null],
-    dinner: ['Roti x2 + dal + sabzi', 'Jowar roti x2 + sabzi', 'Ragi roti x2 + dal', 'White rice 1 cup + dal + sabzi', 'Idli x3 + sambar'],
+    dinner: ['Roti x2 + dal + sabzi', 'Jowar roti x2 + sabzi', 'Ragi roti x2 + dal', 'White rice 1 cup + dal + sabzi', 'Idli x3 + sambar', 'Moong dal chilla x2', null],
   },
-  // two kinds of day; every plan field is something the Twin Lab can change
-  usualFor: kind => kind === 'weekend'
-    ? { dayType: 'weekend', breakfast: 'Aloo paratha x2', lunch: 'Veg biryani (1 plate)', snack: 'Samosa x2', dinner: 'Roti x2 + dal + sabzi', lunchWalk: false, eveWalk: 30, yoga: false, gym: 0, groceries: true, stroll: false }
-    : { dayType: 'weekday', breakfast: 'Masala dosa', lunch: 'White rice 1 cup + dal + sabzi', snack: 'Biscuits + chai', dinner: 'Roti x2 + dal + sabzi', lunchWalk: false, eveWalk: 30, yoga: false, gym: 0, groceries: false, stroll: false },
+  // seven different days; every plan field is something the Twin Lab can change. day 0..6 = Monday..Sunday.
+  usualFor: d => { const i = d === 'weekend' ? 5 : typeof d === 'number' ? d : 0; return { ...BASE_PLAN, ...DAYS[i].preset, day: i }; },
 };
+const BASE_PLAN = { breakfast: 'Masala dosa', lunch: 'White rice 1 cup + dal + sabzi', snack: 'Biscuits + chai', dinner: 'Roti x2 + dal + sabzi', lunchWalk: false, eveWalk: 30, yoga: false, gym: 0, groceries: false, stroll: false, puja: false };
+export const DAYS = [
+  { id: 'mon', name: 'Monday', theme: 'Control day', blurb: 'A normal workday with nothing unusual: the baseline the twin is calibrated on.', preset: {}, incidents: [],
+    unique: ['Café breakfast, desk work, bazaar lunch, evening walk at Lake Park'], risks: ['None on purpose. Use it to compare every other day.'] },
+  { id: 'tue', name: 'Tuesday', theme: 'Fitness day', blurb: 'Asha goes all in: morning yoga, a strength session at the gym and a grocery run. Then the bakery calls on the way home.',
+    preset: { yoga: true, gym: 45, groceries: true, lunchWalk: true, eveWalk: 0, snack: 'Banana' }, incidents: ['pastry'],
+    unique: ['35-minute morning yoga at the Ayurveda & Yoga Centre', '45-minute gym workout', 'Grocery run at Fresh Mart', 'Post-lunch walk'], risks: ['A post-workout pastry and juice logged as "small": under-logged carbs'] },
+  { id: 'wed', name: 'Wednesday', theme: 'Festival day', blurb: 'A festival: morning puja at the temple, a double festival lunch, and prasad at the evening aarti.',
+    preset: { puja: true, breakfast: 'Idli x3 + sambar', eveWalk: 0 }, incidents: ['doubleLunch', 'prasad'],
+    unique: ['Morning puja and parikrama at the temple', 'Festival thali for lunch', 'Evening aarti and prasad'], risks: ['Double thali lunch (about 125 g carbs)', 'Four laddus and payasam that nobody logs'] },
+  { id: 'thu', name: 'Thursday', theme: 'Deadline day', blurb: 'A product launch. No time for lunch, a stressful afternoon, then a huge pizza at the desk and a late dinner.',
+    preset: { breakfast: 'Upma (1 bowl)', snack: null, eveWalk: 0, dinner: 'Moong dal chilla x2' }, incidents: ['stress', 'pizza'],
+    unique: ['Working through lunch at the desk', 'Pizza and cola at 16:45', 'Late dinner at home'], risks: ['Stress hormones lift glucose in the afternoon', 'About 105 g of carbs in one sitting after skipping lunch'] },
+  { id: 'fri', name: 'Friday', theme: 'Movie night', blurb: 'The week is done: a Cineplex night with popcorn and cola, then midnight chips on the sofa.',
+    preset: { eveWalk: 0 }, incidents: ['movie', 'nightSnack'],
+    unique: ['Movie at the Cineplex, 20:00 to 22:30', 'A midnight snack at home'], risks: ['A 105 g popcorn and cola, three hours seated', 'Late chips and cola nobody logs'] },
+  { id: 'sat', name: 'Saturday', theme: 'Wedding day', blurb: 'A morning check-up at the clinic, a light lunch at home, then a wedding at the community hall: buffet, dancing, a late night.',
+    preset: { breakfast: 'Aloo paratha x2', lunch: 'Moong dal chilla x2', snack: null, dinner: null, eveWalk: 0 }, incidents: ['wedding', 'sensor'],
+    unique: ['Clinic check-up and CGM review', 'Wedding at the Temple & Community Hall', 'Dancing for 25 minutes', 'Overnight, the sensor misbehaves'], risks: ['A 150 g wedding buffet with sweets and soft drink', 'A false low at 2 am from a pressed sensor'] },
+  { id: 'sun', name: 'Sunday', theme: 'Sick Sunday', blurb: 'Asha wakes up unwell but keeps the routine: a 45-minute morning walk, brunch at the café, a big family lunch. Her body responds differently today.',
+    preset: { breakfast: 'Poha (1 plate)', lunch: 'Family feast (biryani, raita, sweets)', snack: null, dinner: 'Moong dal chilla x2', groceries: true, eveWalk: 0 }, incidents: ['sick'],
+    unique: ['45-minute walk at Lake Park', 'Brunch at the café', 'Family feast at home', 'Grocery run'], risks: ['Illness lowers insulin sensitivity; the twin has to notice from the numbers'] },
+];
 
-CITY.usual = CITY.usualFor("weekday");   // the weekday baseline
+CITY.usual = CITY.usualFor(0);   // the Monday baseline

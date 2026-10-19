@@ -23,14 +23,28 @@ Needs internet for Three.js (CDN). Press Space to pause, "Follow Asha" to track 
 - **Rank the best single changes**: the twin simulates every single swap or activity and ranks them by time-in-range gain; apply one, or combine the top three from different areas.
 - Gym and yoga are mapped to assumed exercise intensities (0.7 and 0.35 on the model's 0-1 scale); they are not fitted.
 
+## A different day every day
+The HUD's day selector switches between seven days, each with its own activities and its own scenario:
+| Day | Theme | Unique activities | What goes wrong |
+|---|---|---|---|
+| Mon | Control day | the normal workday | nothing (the baseline) |
+| Tue | Fitness day | morning yoga, 45-min strength session, grocery run | post-workout pastry logged as small |
+| Wed | Festival day | morning puja and parikrama, festival lunch, evening aarti | double thali, unlogged prasad |
+| Thu | Deadline day | working through lunch, pizza at the desk | stress hormones, 105 g of carbs in one sitting |
+| Fri | Movie night | Cineplex, midnight snack at home | popcorn and cola, unlogged chips |
+| Sat | Wedding day | clinic check-up, wedding buffet, dancing | 150 g buffet, a false low at 2 am |
+| Sun | Sick Sunday | morning walk, brunch, family feast | illness lowers insulin sensitivity |
+Each day opens with a story card and a toast; the Twin Lab's "The whole week" table runs all seven days with and without the twin guard and can be downloaded as a CSV. Control days (no incidents) raised no false alarms.
+
 ## Risk day: what can go wrong, and what the twin catches
 In the Twin Lab, tick incidents and press "Play this risky day" (Guard button in the HUD switches the twin's guard on and off):
 - 🍰 **Unlogged office-party cake**: the CGM rises faster than the logged meals explain; the guard flags probable unlogged carbs and sends Asha on a walk.
 - 🤒 **Sick day**: insulin sensitivity drops; after the first meal the twin sees glucose running above what the meals explain, flags a change in her body and sends her home to rest.
 - 🍛 **Heavy late dinner + dessert** and 🥘 **festival double-thali lunch**: the guard forecasts the danger zone at the moment the meal is logged and halves the portion, skips dessert and adds a walk.
 - 🛕 **Festival prasad** (unlogged sweets at the temple), 🥐 **pastry and juice logged as a small one** (the twin notices the glucose says about twice the carbs and estimates the real amount), 🎬 **movie-night popcorn and cola** (forecast at the moment it is logged), 🧊 **a frozen CGM** (flat reading while the twin expects a swing; she is falsely reassured and treats herself), 😰 **a stressful deadline** (insulin sensitivity drops in the afternoon; the twin flags it and prescribes a break and a walk).
+- 🍕 **Skipped lunch then a huge desk pizza**, 💒 **wedding buffet**, 🌙 **midnight chips and cola** (unlogged) and 💊 **a forgotten morning tablet** (an assumed 22% drop in insulin sensitivity; medication is not otherwise modelled).
 - 📟 **False low from a sensor glitch**: an abrupt drop the twin cannot explain is flagged as a probable sensor artifact (re-check with a fingerstick), so she does not treat a low that is not real.
-With the guard off, nothing warns her: a red banner and screen vignette show when glucose passes 250 and 300 mg/dL. A table in the Lab lists, per incident, the alert time, the warning lead time, and minutes above 250 and peak without the twin versus with it. These are real outputs of the model, not scripted. There are ten incidents. The effect is large for the meal incidents (festival lunch, late dinner, movie night), moderate for prasad, the pastry and stress, modest for the unlogged cake (the twin only sees it after the rise starts) and the sick day (the twin can only see the body change once she eats); the frozen sensor shows no danger in this simulated patient (the risk is false reassurance), and the false-low case is about avoiding a needless treatment. The City Hospital is where the alert text sends her if glucose stays above 300 or she feels very unwell. No false alarms fired on usual weekday or weekend runs in testing. Incidents are weekday-only and meant one at a time; combinations interact. Medication, hydration and ketones are not modelled; the doctor advice in the alerts is generic, not medical advice.
+With the guard off, nothing warns her: a red banner and screen vignette show when glucose passes 250 and 300 mg/dL. A table in the Lab lists, per incident, the alert time, the warning lead time, and minutes above 250 and peak without the twin versus with it. These are real outputs of the model, not scripted. There are fourteen incidents. The pizza and wedding buffet are caught at the moment they are logged; the midnight snack is only caught half an hour late and a forgotten tablet is too small a shift to matter here. The effect is large for the meal incidents (festival lunch, late dinner, movie night), moderate for prasad, the pastry and stress, modest for the unlogged cake (the twin only sees it after the rise starts) and the sick day (the twin can only see the body change once she eats); the frozen sensor shows no danger in this simulated patient (the risk is false reassurance), and the false-low case is about avoiding a needless treatment. The City Hospital is where the alert text sends her if glucose stays above 300 or she feels very unwell. No false alarms fired on usual weekday or weekend runs in testing. Incidents are weekday-only and meant one at a time; combinations interact. Medication, hydration and ketones are not modelled; the doctor advice in the alerts is generic, not medical advice.
 
 ## What you see
 - **Buildings open up.** When Asha walks in (or you click a building) the roof lifts away and you see the rooms: her bedroom upstairs, the café counter, the open-plan office, the bazaar stalls, the clinic's CGM reader, the Twin Lab's holographic table, a gym and a yoga class. Multi-storey buildings have a Floor switch.
