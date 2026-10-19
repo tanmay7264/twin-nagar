@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Twin Nagar: a glucose digital twin living in a city</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }</script>
+</head>
+<body>
+<div class="map" aria-label="Interactive 3D world. Click a building to learn more.">
+  <canvas id="scene"></canvas>
+  <div id="labels"></div>
+  <p class="nogl" hidden>This 3D view needs WebGL. Use the panel to explore.</p>
+</div>
+<aside class="card panel" id="panel" aria-live="polite"></aside>
+<div class="card controls" role="toolbar" aria-label="Map controls">
+  <button data-action="zoomin" aria-label="Zoom in">+</button>
+  <button data-action="zoomout" aria-label="Zoom out">−</button>
+  <button data-action="spin" aria-label="Rotate view">⟳</button>
+  <button data-action="home" aria-label="Reset view">⌂</button>
+</div>
+<script type="module" src="world.js"></script>
+</body>
+</html>
