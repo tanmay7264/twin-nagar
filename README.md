@@ -39,7 +39,7 @@ The HUD's day selector switches between seven days, each with its own activities
 | ★ | Caffeine overload | four strong black coffees, usual meals | caffeine lowers insulin sensitivity, so the same lunch spikes higher |
 | ★ | Heavy exercise | 45-minute HIIT and heavy lifting | adrenaline releases liver glucose, so glucose rises during the workout |
 | ★ | Late & stuck in traffic | oversleeps, skips the café, an hour in a jammed taxi, 9:30 meeting | stress hormones raise glucose with no food at all |
-Each day opens with a story card and a toast; the Twin Lab's week table runs all seven days and the four ★ special days with and without the twin guard and can be downloaded as a CSV. Control days (no incidents) raised no false alarms.
+When a day ends, the city rolls on to the next day in the selector (Sunday → the ★ days → back to Monday). Each day opens with a story card and a toast; the Twin Lab's week table runs all seven days and the four ★ special days with and without the twin guard and can be downloaded as a CSV. Control days (no incidents) raised no false alarms.
 
 ## Risk day: what can go wrong, and what the twin catches
 In the Twin Lab, tick incidents and press "Play this risky day" (Guard button in the HUD switches the twin's guard on and off):

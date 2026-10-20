@@ -465,7 +465,7 @@ export function initCity(ctx) {
   const ashaPos = new THREE.Vector3(); let ashaMode = 'stand', ashaFace = Math.PI, inside = null, zoomGoal = 2.0;
   const wpos = (id, p) => objects[id].group.position.clone().add(new THREE.Vector3(p.x, p.y, p.z));
   function update(dt, t, w, h) {
-    if (SIM.playing) { SIM.m += dt * 20 * SIM.speed; if (SIM.m >= T1) { if (world.risky) toast(`Day complete. Minutes above 250 mg/dL: ${world.unprot.a250} with nothing watching, ${world.a250} with the twin guard${riskState.guard ? '' : ' (guard is off, so this run is the unprotected one)'}.`, 'guard'); SIM.m = T0; SIM.day++; fcAt = -1; fired = 0; } }
+    if (SIM.playing) { SIM.m += dt * 20 * SIM.speed; if (SIM.m >= T1) { if (world.risky) toast(`Day complete. Minutes above 250 mg/dL: ${world.unprot.a250} with nothing watching, ${world.a250} with the twin guard${riskState.guard ? '' : ' (guard is off, so this run is the unprotected one)'}.`, 'guard'); SIM.day++; goDay((world.plan.day + 1) % DAYS.length); } }   // roll on to the next day in the selector (the ★ days follow Sunday, then back to Monday)
     const m = SIM.m, seg = segAt(world.day, m), gnow = readingAt(m);
     if (m < lastM - 1) fired = world.det.filter(d => d.t <= m).length; lastM = m;
     // ---- Asha: along a street / walking loop outside, or inside a building at her station (door -> entrance -> seat, and back out)
