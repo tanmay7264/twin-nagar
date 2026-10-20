@@ -51,7 +51,7 @@ export const CITY = {
   // name: [carbs g, protein g, fat g, fibre g]  (approximate per serving; verify against IFCT 2017)
   meals: {
     'Idli x3 + sambar': [42, 9, 3, 4], 'Masala dosa': [60, 8, 12, 4], 'Poha (1 plate)': [50, 6, 8, 3], 'Upma (1 bowl)': [45, 7, 9, 3],
-    'Moong dal chilla x2': [28, 16, 8, 6], 'Roti x2 + dal + sabzi': [55, 16, 10, 9], 'White rice 1 cup + dal + sabzi': [70, 14, 8, 6],
+    'Moong dal chilla x2': [28, 16, 8, 6], 'Black coffee (strong)': [1, 0.3, 0, 0], 'Water + ORS (sugar-free)': [0.5, 0, 0, 0], 'Roti x2 + dal + sabzi': [55, 16, 10, 9], 'White rice 1 cup + dal + sabzi': [70, 14, 8, 6],
     'Brown rice + dal + sabzi': [60, 15, 8, 9], 'Ragi roti x2 + dal': [50, 13, 6, 9], 'Jowar roti x2 + sabzi': [45, 10, 6, 8],
     'Veg biryani (1 plate)': [80, 12, 18, 5], 'Curd rice': [45, 8, 6, 1], 'Biscuits + chai': [25, 3, 6, 1], 'Banana': [27, 1, 0, 3],
     'Sprouts chaat': [20, 10, 2, 7], 'Sweets x2 (mithai)': [35, 3, 12, 0], 'Aloo paratha x2': [68, 9, 18, 5],
@@ -88,6 +88,19 @@ export const DAYS = [
   { id: 'sun', name: 'Sunday', theme: 'Sick Sunday', blurb: 'Asha wakes up unwell but keeps the routine: a 45-minute morning walk, brunch at the café, a big family lunch. Her body responds differently today.',
     preset: { breakfast: 'Poha (1 plate)', lunch: 'Family feast (biryani, raita, sweets)', snack: null, dinner: 'Moong dal chilla x2', groceries: true, eveWalk: 0 }, incidents: ['sick'],
     unique: ['45-minute walk at Lake Park', 'Brunch at the café', 'Family feast at home', 'Grocery run'], risks: ['Illness lowers insulin sensitivity; the twin has to notice from the numbers'] },
+  // special scenario days (weekday routine plus one non-food cause of high glucose that the twin has to recognise from context)
+  { id: 'heat', name: 'Heatwave', short: '★', theme: 'Heatwave & dehydration', blurb: 'A 41°C day. Asha walks to the bazaar and back in the sun and drinks only one glass of water. Losing plasma water concentrates her glucose, and high glucose makes her lose more water.',
+    preset: { lunchWalk: true }, incidents: ['heat'],
+    unique: ['Hot walk to the bazaar and a post-lunch walk in the sun', 'Office in the afternoon heat', 'Evening walk planned at Lake Park'], risks: ['Dehydration raises glucose concentration with no extra food', 'A vicious circle: high glucose means more urine and more water loss'] },
+  { id: 'coffee', name: 'Coffee day', short: '★', theme: 'Caffeine overload', blurb: 'A long day fuelled by strong black coffee: one at the café, two at the desk before lunch, one more at 15:30. No sugar, yet lunch hits harder than usual.',
+    preset: {}, incidents: ['caffeine'],
+    unique: ['Four strong black coffees (no sugar)', 'Usual breakfast, lunch and evening walk'], risks: ['Caffeine lowers insulin sensitivity for hours, so the same lunch spikes higher'] },
+  { id: 'hiit', name: 'Training day', short: '★', theme: 'Heavy exercise', blurb: 'Asha tries a high-intensity class: sprints and heavy lifting at the gym after work. Her glucose goes up during the workout, not down.',
+    preset: { gym: 45, eveWalk: 0 }, incidents: ['heavyEx'],
+    unique: ['45-minute HIIT and heavy lifting session at the Community Gym'], risks: ['Adrenaline releases liver glucose during hard exercise', 'Misreading it as food, or panicking and taking an extra tablet'] },
+  { id: 'late', name: 'Late day', short: '★', theme: 'Late & stuck in traffic', blurb: 'Asha oversleeps, skips the café, and sits in a taxi stuck in traffic for almost an hour, anxious about a 9:30 meeting. Her glucose rises with no food at all.',
+    preset: { eveWalk: 30 }, incidents: ['commute'],
+    unique: ['Wakes at 8:05 and rushes out', 'Taxi stuck in traffic', 'Product review at 9:30, breakfast at the desk at 11:05'], risks: ['Adrenaline and cortisol raise glucose without food', 'A grab-and-go vada pav breakfast on top of it'] },
 ];
 
 CITY.usual = CITY.usualFor(0);   // the Monday baseline

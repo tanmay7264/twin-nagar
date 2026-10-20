@@ -45,9 +45,10 @@ const ACT_LABEL = { yoga: 'Morning yoga', run: 'Gym workout', shop: 'Shopping' }
 /* ---------- Asha's day for a plan: blocks (where, when, what) -> segments, glucose-model inputs (meals + exercise) and chart markers ----------
    A block has a place and either a fixed arrival time or follows the previous block (arrival = leave + travel). It leaves at arr + dur, at leaveAt,
    or (open-ended) in time to reach the next fixed block. Phases are things she does there; exercise intensity ex (0..1) feeds the ODE. */
-const INC_OK = { cake: d => d < 5, prasad: d => d < 5, pastry: d => d < 5, movie: d => d < 5, doubleLunch: d => d < 5, lateDinner: d => d < 5, pizza: d => d < 5, stuck: d => d < 5, stress: d => d < 5, wedding: d => d === 5 };
+const WD = d => d !== 5 && d !== 6;                                   // weekday templates (Mon-Fri and the special days 7+)
+const INC_OK = { cake: WD, prasad: WD, pastry: WD, movie: WD, doubleLunch: WD, lateDinner: WD, pizza: WD, stuck: WD, stress: WD, wedding: d => d === 5, heat: WD, caffeine: WD, heavyEx: WD, commute: WD };
 export function buildDay(plan0) {
-  const day = plan0.day ?? 0, wk = day >= 5, sat = day === 5, sun = day === 6;
+  const day = plan0.day ?? 0, sat = day === 5, sun = day === 6, wk = sat || sun;
   const inc = new Set((plan0.incidents || []).filter(k => (INC_OK[k] || (() => true))(day)));
   const mit = plan0.mitigate || {}, P = { ...plan0 }, B = [], por = { lunch: 1, dinner: 1, movie: 1, pizza: 1, wedding: 1 }, drift = mit.drift;
   const sickHome = !wk && inc.has('sick') && drift != null, sickEarly = sickHome && drift < hm(12, 30), sickLate = sickHome && !sickEarly && drift < hm(14, 20), sickMorning = sickHome && drift < hm(8, 50), sickWk = sun && inc.has('sick') && drift != null;
@@ -64,6 +65,9 @@ export function buildDay(plan0) {
     if (inc.has('stuck') && mit.stuck == null) P.reassured = 'Sweets x2 (mithai)';
     if (sickHome) { if (sickEarly) P.lunch = 'Moong dal chilla x2'; P.dinner = 'Moong dal chilla x2'; if (sickEarly || drift < hm(16, 30)) P.snack = null; P.yoga = false; P.gym = 0; P.eveWalk = 0; P.groceries = false; P.lunchWalk = sickEarly ? false : P.lunchWalk; P.stroll = false; por.dinner = 1; }
     if (P.puja) P.offering = 'Banana';
+    if (inc.has('commute')) { P.breakfast = mit.commute != null ? 'Moong dal chilla x2' : 'Vada pav'; P.puja = false; P.yoga = false; }
+    if (inc.has('caffeine')) { P.coffeeA = P.coffeeB = P.coffeeC = P.coffeeD = 'Black coffee (strong)'; if (mit.caffeine != null) { if (mit.caffeine < hm(15, 30)) P.coffeeD = null; P.snack = null; } }
+    if (inc.has('heat') && mit.heat != null && mit.heat < hm(17, 15)) { P.eveWalk = 0; P.groceries = true; }
   }
   if (sat && inc.has('wedding')) { P.wedding = 'Wedding buffet (biryani, sweets, soft drink)'; if (mit.heavyWedding) por.wedding = 0.55; }
   if (sickWk) { P.lunch = 'Moong dal chilla x2'; P.groceries = false; P.dinner = 'Moong dal chilla x2'; }
@@ -73,23 +77,27 @@ export function buildDay(plan0) {
   const off2 = [];                                                      // things that happen at the desk
   if (!wk) {
     B.push({ place: 'home', fixed: hm(5), pose: 'sleep', label: 'Sleeping' });
-    if (P.puja) B.push({ place: 'temple', fixed: hm(6, 40), dur: 40, pose: 'idle', label: 'Morning puja at the temple', phases: [{ off: 4, min: 20, loop: 'temple', label: 'Morning puja and parikrama', ex: 0.5 }, { off: 27, min: 5, pose: 'eat', slot: 'offering' }] });
+    const late = inc.has('commute');
+    if (late) B.push({ place: 'home', fixed: hm(8, 5), leaveAt: hm(8, 25), pose: 'morning', label: 'Overslept: rushing to get ready' });
+    else if (P.puja) B.push({ place: 'temple', fixed: hm(6, 40), dur: 40, pose: 'idle', label: 'Morning puja at the temple', phases: [{ off: 4, min: 20, loop: 'temple', label: 'Morning puja and parikrama', ex: 0.5 }, { off: 27, min: 5, pose: 'eat', slot: 'offering' }] });
     else if (P.yoga) B.push({ place: 'ayur', fixed: hm(6, 30), dur: 45, pose: 'yoga', label: 'At the yoga centre', phases: [{ off: 5, min: 35, pose: 'yoga', ex: 0.35, label: 'Morning yoga' }] });
     else B.push({ place: 'home', fixed: hm(6, 30), pose: 'morning', label: 'Morning routine' });
-    B.push({ place: 'cafe', fixed: hm(7, 40), ...(sickMorning ? { dur: 55 } : {}), pose: 'idle', label: 'At the café', phases: [{ off: 2, min: 25, pose: 'eat', slot: 'breakfast' }] });
+    if (!late) B.push({ place: 'cafe', fixed: hm(7, 40), ...(sickMorning ? { dur: 55 } : {}), pose: 'idle', label: 'At the café', phases: [{ off: 2, min: 25, pose: 'eat', slot: 'breakfast' }, { off: 28, min: 5, pose: 'eat', slot: 'coffeeA' }] });
     if (P.snack && !sickLate) off2.push({ atAbs: hm(16, 30), min: 10, pose: 'eat', slot: 'snack' });
     if (P.cake) { off2.push({ atAbs: hm(15, 30), min: 8, pose: 'eat', slot: 'cake', hidden: true }); if (mit.cake != null) off2.push({ atAbs: Math.max(mit.cake + 2, hm(15, 38)), min: 30, loop: 'office', label: 'Twin-advised walk', ex: 1 }); }
+    if (P.coffeeD) off2.push({ atAbs: hm(15, 30), min: 5, pose: 'eat', slot: 'coffeeD' });
     if (P.reassured) off2.push({ atAbs: hm(15, 40), min: 6, pose: 'eat', slot: 'reassured' });
     if (mit.stuck != null) off2.push({ atAbs: Math.max(mit.stuck + 8, hm(14, 45)), min: 20, loop: 'office', label: 'Twin-advised walk (after a fingerstick)', ex: 1 });
     if (stressLike) off2.push({ atAbs: Math.max(drift + 3, hm(15, 0)), min: 15, loop: 'office', label: 'Twin-advised break: a walk', ex: 1 });
     if (pizzaDay) { off2.push({ atAbs: hm(16, 45), min: 12, pose: 'eat', slot: 'pizza' }); if (mit.heavyPizza) off2.push({ atAbs: hm(17, 10), min: 15, loop: 'office', label: 'Twin-advised walk', ex: 1 }); }
-    if (!sickMorning) B.push({ place: 'office', fixed: hm(9), ...(sickEarly ? { leaveAt: drift } : {}), ...(pizzaDay ? { leaveAt: hm(19, 30), phases: off2.filter(p => p.atAbs >= hm(15)) } : {}), pose: 'work', label: pizzaDay ? 'Deadline crunch' : 'Desk work' });
+    if (late) B.push({ place: 'office', legMul: 5, legLabel: 'Stuck in traffic (taxi to the office)', pose: 'work', label: 'Late for the 9:30 product review', phases: [{ atAbs: hm(11, 5), min: 12, pose: 'eat', slot: 'breakfast' }] });
+    else if (!sickMorning) B.push({ place: 'office', fixed: hm(9), phases: [{ atAbs: hm(10, 30), min: 5, pose: 'eat', slot: 'coffeeB' }, { atAbs: hm(12, 30), min: 5, pose: 'eat', slot: 'coffeeC' }], ...(sickEarly ? { leaveAt: drift } : {}), ...(pizzaDay ? { leaveAt: hm(19, 30), phases: off2.filter(p => p.atAbs >= hm(15)) } : {}), pose: 'work', label: pizzaDay ? 'Deadline crunch' : 'Desk work' });
     if (!sickEarly && !pizzaDay) {
       B.push({ place: 'market', fixed: hm(13, 15), ...(sickLate ? { dur: 65 } : {}), pose: 'idle', label: 'Lunch break', phases: [{ off: 3, min: 30, pose: 'eat', slot: 'lunch' }, ...(P.lunchWalk ? [{ off: 36, min: inc.has('doubleLunch') && mit.heavyLunch ? 25 : 15, loop: 'market', label: mit.heavyLunch ? 'Twin-advised walk' : 'Post-lunch walk' }] : [])] });
       if (!sickLate) B.push({ place: 'office', fixed: hm(14, 40), leaveAt: sickHome ? Math.max(drift, hm(14, 50)) : hm(17, 15), pose: 'work', label: 'Desk work', phases: off2 });
       if (P.pastry && !sickHome) B.push({ place: 'bakery', dur: mit.pastry != null ? 50 : 22, pose: 'idle', label: 'At the bakery', phases: [{ off: 3, min: 10, pose: 'eat', slot: 'pastry', underlog: true }, ...(mit.pastry != null ? [{ atAbs: mit.pastry + 2, min: 20, loop: 'bakery', label: 'Twin-advised walk', ex: 1 }] : [])] });
       if (P.prasad && !sickHome) B.push({ place: 'temple', dur: mit.prasad != null ? 55 : 35, pose: 'idle', label: 'At the temple aarti', phases: [{ off: 8, min: 8, pose: 'eat', slot: 'prasad', hidden: true }, ...(mit.prasad != null ? [{ atAbs: mit.prasad + 2, min: 20, loop: 'temple', label: 'Twin-advised walk (parikrama)', ex: 1 }] : [])] });
-      if (P.gym && !sickHome) B.push({ place: 'gym', dur: P.gym + 8, pose: 'run', label: 'At the gym', phases: [{ off: 4, min: P.gym, pose: 'run', ex: 0.7, label: 'Strength workout' }] });
+      if (P.gym && !sickHome) B.push({ place: 'gym', dur: P.gym + 8 + (inc.has('heavyEx') && mit.heavyEx != null ? 12 : 0), pose: 'run', label: 'At the gym', phases: [{ off: 4, min: P.gym, pose: 'run', ex: inc.has('heavyEx') ? 1 : 0.7, label: inc.has('heavyEx') ? 'HIIT and heavy lifting (heart rate 160)' : 'Strength workout' }, ...(inc.has('heavyEx') && mit.heavyEx != null ? [{ off: 4 + P.gym, min: 12, pose: 'yoga', ex: 0.4, label: 'Twin-advised cool-down and stretch' }] : [])] });
       if (P.eveWalk && !sickHome) B.push({ place: 'park', dur: P.eveWalk + 8, pose: 'idle', label: 'At the park', phases: [{ off: 4, min: P.eveWalk, loop: 'park', label: 'Evening walk' }] });
       if (P.groceries && !sickHome) B.push({ place: 'mart', dur: 25, pose: 'shop', label: 'Grocery shopping', phases: [{ off: 3, min: 18, pose: 'shop', ex: 0.4, label: 'Shopping' }] });
     }
@@ -117,7 +125,7 @@ export function buildDay(plan0) {
   B.push({ place: 'home', fixed: sat ? hm(23) : hm(22, 30), pose: 'sleep', label: 'Sleeping', phases: [...(inc.has('sensor') && P.juice ? [{ atAbs: 1578, min: 8, pose: 'eat', slot: 'juice' }] : []), ...(P.night ? [{ atAbs: 1420, min: 8, pose: 'eat', slot: 'night', hidden: true }, ...(mit.night != null ? [{ atAbs: Math.max(mit.night + 2, 1430), min: 15, loop: 'home', label: 'Twin-advised walk', ex: 0.6 }] : [])] : [])] });
   // pass 1: arrival / leave times
   for (let i = 0; i < B.length; i++) {
-    const b = B[i], p = B[i - 1], leg = p && p.place !== b.place ? legInfo(p.place, b.place) : null; b.leg = leg;
+    const b = B[i], p = B[i - 1], leg0 = p && p.place !== b.place ? legInfo(p.place, b.place) : null, leg = leg0 && b.legMul ? { ...leg0, dur: Math.round(leg0.dur * b.legMul), label: b.legLabel } : leg0; b.leg = leg;
     if (p) {
       const need = (p.leave ?? -1) + (leg ? leg.dur : 0);
       if (b.fixed != null) { if (p.leave == null) { p.leave = b.fixed - (leg ? leg.dur : 0); } b.arr = Math.max(b.fixed, p.leave + (leg ? leg.dur : 0)); }
@@ -126,6 +134,10 @@ export function buildDay(plan0) {
     b.leave = b.leaveAt ?? (b.dur != null ? b.arr + b.dur : null);
     if (i === B.length - 1) b.leave = T1 + 1;
   }
+  const doAt = (t, ph) => { const i = B.findIndex((b, k) => b.arr <= t && t < (b.leave ?? B[k + 1]?.arr ?? T1)); if (i >= 0) (B[i].phases ||= []).push({ atAbs: t, ...ph }); };
+  if (inc.has('commute') && mit.commute != null) doAt(hm(10, 50), { min: 12, loop: 'office', label: 'Twin-advised: a 10-minute walk after the meeting', ex: 1 });
+  if (inc.has('caffeine') && mit.caffeine != null) doAt(Math.max(mit.caffeine + 3, hm(14, 42)), { min: 15, loop: 'office', label: 'Twin-advised walk (and water, not coffee)', ex: 1 });
+  if (inc.has('heat') && mit.heat != null) { P.water = 'Water + ORS (sugar-free)'; doAt(mit.heat + 2, { min: 6, pose: 'eat', slot: 'water' }); }
   // pass 2: segments
   const segs = [], events = [], acts = [], ex = new Float32Array(T1 + 2);
   const add = s => segs.push(s), phaseT = (b, ph) => ph.atAbs != null ? Math.max(ph.atAbs, b.arr + (ph.minOff ?? 0)) : b.arr + ph.off;
@@ -137,21 +149,37 @@ export function buildDay(plan0) {
       const at = phaseT(b, ph); if (at < cur || at >= end0) continue;
       if (at > cur) add({ t0: cur, t1: at, kind: 'stay', place: b.place, pose: b.pose, label: b.label });
       if (ph.loop) { const lp = LOOPS[ph.loop](); add({ t0: at, t1: at + ph.min, kind: 'loop', place: b.place, poly: lp, laps: Math.max(1, Math.round(ph.min / (polyLen(lp) * 0.9))), label: ph.label || 'Walk' }); acts.push([at, at + ph.min, ph.label || 'Walk']); for (let m = at; m < at + ph.min; m++) ex[m] = Math.max(ex[m], ph.ex ?? 1); }
-      else if (ph.slot) { const name = P[ph.slot]; if (name) { const ml = mealOf(name); events.push({ t: at, ...ml, c: ph.underlog ? 35 : ml.c * (por[ph.slot] ?? 1), ...(ph.underlog ? { cr: ml.c } : {}), slot: ph.slot, name, place: b.place, hidden: !!ph.hidden }); add({ t0: at, t1: at + ph.min, kind: 'stay', place: b.place, pose: 'eat', meal: name, slot: ph.slot, label: ph.slot === 'reassured' ? `Eating ${name} (the frozen sensor reads "fine")` : ph.hidden ? `Eating ${name} (not logged)` : ph.underlog ? `Eating ${name} (logged as a small one)` : ph.slot === 'juice' ? 'Woken by a low alarm: drinking juice' : `Eating ${name}` }); } else { cur = at; continue; } }
+      else if (ph.slot) { const name = P[ph.slot]; if (name) { const ml = mealOf(name); events.push({ t: at, ...ml, c: ph.underlog ? 35 : ml.c * (por[ph.slot] ?? 1), ...(ph.underlog ? { cr: ml.c } : {}), slot: ph.slot, name, place: b.place, hidden: !!ph.hidden }); add({ t0: at, t1: at + ph.min, kind: 'stay', place: b.place, pose: 'eat', meal: name, slot: ph.slot, label: ph.slot === 'reassured' ? `Eating ${name} (the frozen sensor reads "fine")` : ph.hidden ? `Eating ${name} (not logged)` : ph.underlog ? `Eating ${name} (logged as a small one)` : ph.slot === 'juice' ? 'Woken by a low alarm: drinking juice' : `${/coffee|water|juice/i.test(name) ? 'Drinking' : 'Eating'} ${name}` }); } else { cur = at; continue; } }
       else { add({ t0: at, t1: at + ph.min, kind: 'stay', place: b.place, pose: ph.pose, label: ph.label || b.label }); acts.push([at, at + ph.min, ph.label]); for (let m = at; m < at + ph.min; m++) ex[m] = Math.max(ex[m], ph.ex ?? 0.3); }
       cur = at + ph.min;
     }
     const legDur = next && next.leg ? next.leg.dur : 0, end = next ? (next.arr - legDur) : T1 + 1;
     if (end > cur) add({ t0: cur, t1: end, kind: 'stay', place: b.place, pose: b.pose, label: b.label });
-    if (legDur) { add({ t0: end, t1: next.arr, kind: 'leg', poly: next.leg.poly, auto: next.leg.auto, from: b.place, to: next.place, label: `${next.leg.auto ? 'Taxi ride' : 'Walking'} to ${zoneOf[next.place].name}` }); for (let m = end; m < next.arr; m++) ex[m] = Math.max(ex[m], next.leg.auto ? 0.05 : 0.6); }
+    if (legDur) { add({ t0: end, t1: next.arr, kind: 'leg', poly: next.leg.poly, auto: next.leg.auto, from: b.place, to: next.place, label: next.leg.label || `${next.leg.auto ? 'Taxi ride' : 'Walking'} to ${zoneOf[next.place].name}` }); for (let m = end; m < next.arr; m++) ex[m] = Math.max(ex[m], next.leg.auto ? 0.05 : 0.6); }
   });
   segs.sort((a, b) => a.t0 - b.t0);
   segs.forEach((sg, i) => { const p = segs[i - 1], n = segs[i + 1]; sg.enter = !(p && p.kind === 'stay' && p.place === sg.place); sg.exit = !(n && n.kind === 'stay' && n.place === sg.place); });
   const walks = acts.map(a => [a[0], a[1]]);
   const sickF = t => 1 - 0.5 * sstep(hm(5, 30), hm(6, 30), t), stressF = t => 1 - 0.55 * sstep(hm(13, 30), hm(14, 30), t) * (1 - sstep(hm(18), hm(19), t));
-  const siFn = (inc.has('sick') || inc.has('stress') || inc.has('missedTablet')) ? (t => (inc.has('sick') ? sickF(t) : 1) * (inc.has('stress') ? stressF(t) : 1) * (inc.has('missedTablet') ? 0.78 : 1)) : null;
+  // new context scenarios (ASSUMED magnitudes): caffeine lowers insulin sensitivity for hours (half-life ~5 h); stress hormones and intense
+  // exercise release liver glucose; after hard exercise sensitivity is higher for the rest of the day; heat drains plasma water.
+  const coffees = events.filter(e => /^coffee/.test(e.slot)).map(e => e.t), caf = t => coffees.reduce((a, c) => a + (t < c ? 0 : Math.min(1, (t - c) / 30) * Math.pow(0.5, (t - c) / 300)), 0);
+  const gymB = B.find(b => b.place === 'gym'), ws = gymB ? gymB.arr + 4 : 0, we = ws + (P.gym || 0), cool = mit.heavyEx != null;
+  const exE = t => !inc.has('heavyEx') || !gymB ? 0 : t < ws ? 0 : t < we ? 1.5 * Math.min(1, (t - ws) / 12) : 1.5 * Math.exp(-(t - we) / (cool ? 9 : 28));
+  const stressC = t => inc.has('commute') ? sstep(hm(8, 8), hm(8, 40), t) * (1 - sstep(hm(10, 45), hm(11, 30), t)) * (mit.commute != null && t > mit.commute + 5 ? 0.45 : 1) : 0;
+  const egpFn = (inc.has('caffeine') || inc.has('heavyEx') || inc.has('commute')) ? (t => 0.06 * caf(t) + exE(t) + 0.6 * stressC(t)) : null;
+  const siFn = (inc.has('sick') || inc.has('stress') || inc.has('missedTablet') || inc.has('caffeine') || inc.has('heavyEx') || inc.has('commute')) ? (t => (inc.has('sick') ? sickF(t) : 1) * (inc.has('stress') ? stressF(t) : 1) * (inc.has('missedTablet') ? 0.78 : 1)
+    * (inc.has('caffeine') ? 1 - Math.min(0.45, 0.14 * caf(t)) : 1) * (inc.has('commute') ? 1 - 0.2 * stressC(t) : 1) * (inc.has('heavyEx') && gymB && t > we ? 1 + 0.35 * Math.exp(-(t - we) / 720) : 1)) : null;
+  const mh = mit.heat;
+  const hot = t => t >= hm(11) && t < hm(18, 45), shade = t => (mh != null && t > mh ? 0.3 : 1);
+  const hyd = inc.has('heat') ? { osm: 0.000002, egpK: 4, loss: t => hot(t) ? (0.00012 + 0.0004 * (ex[t] || 0)) * shade(t) : 0,
+    rehyd: t => (t >= hm(13, 20) && t < hm(13, 28) ? 0.01 : 0) + (mh != null && t >= mh + 2 && t < mh + 70 ? 0.03 : 0) } : null;
+  const context = [...(inc.has('heat') ? [{ type: 'heat', t0: hm(11), t1: hm(18, 45), hold: 1e4, why: 'the weather feed says 41°C and only one glass of water is logged' }] : []),
+    ...(inc.has('caffeine') && coffees.length ? [{ type: 'caffeine', t0: coffees[0], t1: hm(18), why: `${coffees.length} strong coffees are logged since ${clock(coffees[0])}` }] : []),
+    ...(inc.has('heavyEx') && gymB ? [{ type: 'heavyEx', t0: ws, t1: we, why: 'the watch shows heart rate 160 bpm' }] : []),
+    ...(inc.has('commute') ? [{ type: 'commute', t0: hm(8, 10), t1: hm(10, 45), why: 'heart rate is 104 bpm while seated, the taxi is crawling at 6 km/h and there is a 9:30 meeting on the calendar' }] : [])];
   const artifact = [...(inc.has('sensor') ? [{ type: 'drop', t0: 1570, t1: 1592, drop: 72 }] : []), ...(inc.has('stuck') ? [{ type: 'freeze', t0: hm(12, 40), t1: hm(15) }] : [])];
-  return { segs, events, walks, acts, ex, plan: plan0, blocks: B, siFn, artifact: artifact.length ? artifact : null };
+  return { segs, events, walks, acts, ex, plan: plan0, blocks: B, siFn, egpFn, hyd, context, artifact: artifact.length ? artifact : null };
 }
 const segAt = (day, m) => day.segs.find(s => m >= s.t0 && m < s.t1) || day.segs[day.segs.length - 1];
 
@@ -168,19 +196,20 @@ export function initCity(ctx) {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b), isUsual = p => same(p, CITY.usualFor(p.day)), usual = () => CITY.usualFor(labState.plan.day);
   const riskState = { incidents: [], guard: true }, INCIDENTS = { cake: ['🍰', 'Unlogged office-party cake'], sick: ['🤒', 'Sick day (woke up unwell, insulin sensitivity drops)'], lateDinner: ['🍛', 'Heavy late dinner + dessert'], doubleLunch: ['🥘', 'Festival lunch (double thali)'], sensor: ['📟', 'False low from a sensor glitch'],
     prasad: ['🛕', 'Festival prasad at the temple (unlogged sweets)'], movie: ['🎬', 'Movie night: large popcorn + cola'], pastry: ['🥐', 'Pastry and juice, under-logged'], stuck: ['🧊', 'CGM freezes at a normal-looking number'], stress: ['😰', 'Stressful deadline (stress hormones raise glucose)'],
-    pizza: ['🍕', 'Skipped lunch, then a huge pizza and cola at the desk'], wedding: ['💒', 'Wedding buffet with sweets and soft drink (Saturday)'], nightSnack: ['🌙', 'Midnight chips and cola, not logged'], missedTablet: ['💊', 'Forgot the morning tablet (assumed: 22% lower insulin sensitivity)'] };
+    pizza: ['🍕', 'Skipped lunch, then a huge pizza and cola at the desk'], wedding: ['💒', 'Wedding buffet with sweets and soft drink (Saturday)'], nightSnack: ['🌙', 'Midnight chips and cola, not logged'], missedTablet: ['💊', 'Forgot the morning tablet (assumed: 22% lower insulin sensitivity)'],
+    heat: ['🌡', 'Heatwave and too little water (dehydration concentrates glucose)'], caffeine: ['☕', 'Four strong coffees (caffeine lowers insulin sensitivity)'], heavyEx: ['🏋', 'Heavy HIIT and lifting session (adrenaline releases liver glucose)'], commute: ['🚕', 'Late, stuck in traffic, anxious about a meeting (stress hormones, no food)'] };
   const readingOf = (trace, day) => { if (!day.artifact) return trace; const R = Float32Array.from(trace); for (const { type, t0, t1, drop } of day.artifact) { if (type === 'drop') for (let t = t0; t <= t1; t++) R[t - T0] -= drop * clamp(Math.min((t - t0) / 4, (t1 - t) / 4), 0, 1); else { const v = trace[t0 - T0]; for (let t = t0; t <= t1; t++) R[t - T0] = v + Math.sin(t) * 0.4; } } return R; };
-  const evalDay = plan => { const day = buildDay(plan), r = simulate({ events: day.events, ex: day.ex, th: REAL_D.th, gb, t0: T0, t1: T1, mult: REAL_D.mult, siFn: day.siFn }); return { day, trace: r.trace, reading: readingOf(r.trace, day), ...metrics(r.trace) }; };
+  const evalDay = plan => { const day = buildDay(plan), r = simulate({ events: day.events, ex: day.ex, th: REAL_D.th, gb, t0: T0, t1: T1, mult: REAL_D.mult, siFn: day.siFn, egpFn: day.egpFn, hyd: day.hyd }); return { day, trace: r.trace, water: r.water, reading: readingOf(r.trace, day), ...metrics(r.trace) }; };
   const mitigationFrom = (det, events) => { const m = {}; for (const d of det) {
       if (d.type === 'unlogged') { const h = events.filter(e => e.hidden && e.t <= d.t && d.t - e.t < 120).sort((a, b) => b.t - a.t)[0]; if (h) m[h.slot] = d.t; }
       if (d.type === 'underlog' && d.slot === 'pastry') m.pastry = d.t;
-      if (d.type === 'drift') m.drift = d.t; if (d.type === 'sensor') m.sensor = true; if (d.type === 'stuck') m.stuck = d.t;
+      if (d.type === 'drift') m.drift = d.t; if (['heat', 'caffeine', 'heavyEx', 'commute'].includes(d.type)) m[d.type] = d.t; if (d.type === 'sensor') m.sensor = true; if (d.type === 'stuck') m.stuck = d.t;
       if (d.type === 'heavy') m[d.slot === 'dinner' ? 'heavyDinner' : d.slot === 'movie' ? 'heavyMovie' : d.slot === 'pizza' ? 'heavyPizza' : d.slot === 'wedding' ? 'heavyWedding' : 'heavyLunch'] = true; } return m; };
   const protectedRun = (base, guard) => {       // the day as it unfolds with nothing watching, the twin's alerts for it, and the day with the twin acting on them
     const un = evalDay(base), belief = beliefTrace({ events: un.day.events, ex: un.day.ex, th, gb, t0: T0, t1: T1 });
-    const det = (base.incidents && base.incidents.length) ? detect({ reading: un.reading, belief, events: un.day.events, t0: T0 }) : [];
+    const det = (base.incidents && base.incidents.length) ? detect({ reading: un.reading, belief, events: un.day.events, t0: T0, context: un.day.context }) : [];
     const pr = guard && det.length ? evalDay({ ...base, mitigate: mitigationFrom(det, un.day.events) }) : un;
-    return { un, pr, det };
+    return { un, pr, det, belief };
   };
   const setWorld = plan => {
     const base = { ...plan, ...(riskState.incidents.length ? { incidents: [...riskState.incidents] } : {}) };
@@ -191,10 +220,10 @@ export function initCity(ctx) {
     alertLog.length = 0; lastAlert = -1e9; alertUntil = -1;
   };
   let fired = 0;
-  const reportCache = {};
+  const reportCache = {}, CTX = ['heat', 'caffeine', 'heavyEx', 'commute'];
   const safetyReport = () => Object.keys(INCIDENTS).map(k => {
-    if (!reportCache[k]) { const base = { ...CITY.usualFor(k === 'wedding' ? 5 : 0), incidents: [k] }, { un, pr, det } = protectedRun(base, true), a = det[0]; let first = -1; for (let i = 0; i < un.trace.length; i++) if (un.trace[i] > DANGER) { first = T0 + i; break; } const from = { cake: hm(15), sick: hm(7, 30), lateDinner: hm(21, 50), doubleLunch: hm(13), sensor: 1560, prasad: hm(17, 30), movie: hm(19, 45), pastry: hm(17), stuck: hm(12, 30), stress: hm(14), pizza: hm(16, 30), wedding: hm(18, 30), nightSnack: hm(23, 30), missedTablet: hm(9) }[k] - T0, pk = tr => { let m = 0; for (let i = from; i < tr.length; i++) m = Math.max(m, tr[i]); return m; };
-      reportCache[k] = { k, un, pr, alertT: a?.t ?? null, lead: a && first >= 0 && first > a.t ? first - a.t : null, first, pkUn: pk(un.trace), pkPr: pk(pr.trace) }; }
+    if (!reportCache[k]) { const base = { ...CITY.usualFor({ wedding: 5, heat: 7, caffeine: 8, heavyEx: 9, commute: 10 }[k] ?? 0), incidents: [k] }, { un, pr, det, belief } = protectedRun(base, true), a = det[0], naive = CTX.includes(k) ? detect({ reading: un.reading, belief, events: un.day.events, t0: T0 })[0]?.type : null; let first = -1; for (let i = 0; i < un.trace.length; i++) if (un.trace[i] > DANGER) { first = T0 + i; break; } const from = { cake: hm(15), sick: hm(7, 30), lateDinner: hm(21, 50), doubleLunch: hm(13), sensor: 1560, prasad: hm(17, 30), movie: hm(19, 45), pastry: hm(17), stuck: hm(12, 30), stress: hm(14), pizza: hm(16, 30), wedding: hm(18, 30), nightSnack: hm(23, 30), missedTablet: hm(9), heat: hm(11), caffeine: hm(7, 45), heavyEx: hm(17, 30), commute: hm(8) }[k] - T0, pk = tr => { let m = 0; for (let i = from; i < tr.length; i++) m = Math.max(m, tr[i]); return m; };
+      reportCache[k] = { k, un, pr, naive, named: a?.type, alertT: a?.t ?? null, lead: a && first >= 0 && first > a.t ? first - a.t : null, first, pkUn: pk(un.trace), pkPr: pk(pr.trace) }; }
     return reportCache[k];
   });
   setWorld(CITY.usualFor(0));
@@ -221,7 +250,7 @@ export function initCity(ctx) {
   // HUD
   const hud = document.createElement('div'); hud.className = 'card hud'; hud.id = 'hud';
   hud.innerHTML = `<div class="hudtop"><b id="clk">--:--</b><span id="where"></span><span class="sp"></span>
-    <button data-sim="play" aria-label="Pause or play">❚❚</button><button data-sim="speed">1×</button><button data-sim="follow" aria-pressed="false">Follow Asha</button><button data-sim="restart">Restart day</button><select class="dayselect" data-hudday aria-label="Day of the week">${DAYS.map((d, i) => `<option value="${i}">${d.name.slice(0, 3)} · ${d.theme}</option>`).join('')}</select><button data-sim="guard" class="on">🛡 Guard ON</button></div>
+    <button data-sim="play" aria-label="Pause or play">❚❚</button><button data-sim="speed">1×</button><button data-sim="follow" aria-pressed="false">Follow Asha</button><button data-sim="restart">Restart day</button><select class="dayselect" data-hudday aria-label="Day of the week">${DAYS.map((d, i) => `<option value="${i}">${d.short ?? d.name.slice(0, 3)} · ${d.theme}</option>`).join('')}</select><button data-sim="guard" class="on">🛡 Guard ON</button></div>
     <div class="hudmain"><div class="gl" id="glbox"><b id="gl">--</b><small>mg/dL <span id="tr"></span></small><em id="risk"></em></div><canvas id="hudchart" height="118"></canvas></div>
     <div class="chips" id="chips"></div><div class="hudnote" id="hudnote"></div>`;
   document.body.append(hud);
@@ -306,13 +335,17 @@ export function initCity(ctx) {
       <label class="fld chk"><input type="checkbox" data-guard ${riskState.guard ? 'checked' : ''}> 🛡 Twin guard on</label>
       <button class="btn" data-act="playrisk">Play this risky day</button>
       <div id="safety">${safetyHtml()}</div>
-      <h3>The whole week</h3><p class="muted">Each day has its own activities and its own scenario. Click a day to play it.</p><div id="week">${weekHtml()}</div>
-      <p class="muted">Simulation on the research twin's ODE, calibrated on a real participant. Carbs are approximate; gym and yoga are mapped to assumed exercise intensities; sleep, stress and medication are not modelled. Illustrative only, not medical advice.</p>`;
+      <h3>The whole week, plus four special days</h3><p class="muted">Each day has its own activities and its own scenario. The ★ days add a non-food cause of high glucose. Click a day to play it.</p><div id="week">${weekHtml()}</div>
+      <p class="muted">Simulation on the research twin's ODE, calibrated on a real participant. Carbs are approximate; gym and yoga are mapped to assumed exercise intensities; stress, caffeine, heat and hard-exercise effects use assumed sizes; sleep and medication are not modelled. Illustrative only, not medical advice.</p>`;
   }
   const hh = m => clock(m);
+  const CAUSE = { heat: 'dehydration', caffeine: 'caffeine', heavyEx: 'exercise adrenaline', commute: 'stress', drift: 'illness / lower insulin sensitivity', unlogged: 'unlogged food', underlog: 'under-logged meal' };
   function safetyHtml() {
     const rows = safetyReport(), tot = rows.reduce((a, r) => ({ un: a.un + r.un.a250, pr: a.pr + r.pr.a250 }), { un: 0, pr: 0 });
     return `<table class="safe"><tr><th>If this happens…</th><th>Twin alert</th><th>Minutes above 250<br><small>no twin → twin</small></th><th>Peak after it<br><small>no twin → twin</small></th></tr>${rows.map(r => `<tr><td>${INCIDENTS[r.k][0]} ${esc(INCIDENTS[r.k][1])}</td><td>${r.alertT != null ? hh(r.alertT) + (r.lead != null && r.lead > 0 ? `<br><small>${r.lead} min before danger</small>` : '') : '–'}</td><td>${r.un.a250} → <b>${r.pr.a250}</b></td><td>${Math.round(r.pkUn)} → <b>${Math.round(r.pkPr)}</b></td></tr>`).join('')}</table>
+      <h4>Non-food causes: does the twin name the right one?</h4>
+      <table class="safe"><tr><th>Scenario</th><th>Guard says<br><small>with context</small></th><th>Without context<br><small>it would guess</small></th><th>Minutes above 180<br><small>no twin → twin</small></th></tr>${rows.filter(r => CTX.includes(r.k)).map(r => `<tr><td>${INCIDENTS[r.k][0]} ${esc(INCIDENTS[r.k][1])}</td><td>${r.alertT != null ? `${hh(r.alertT)} ${CAUSE[r.named] || r.named}` : '–'}</td><td>${CAUSE[r.naive] || '–'}</td><td>${r.un.above} → <b>${r.pr.above}</b></td></tr>`).join('')}</table>
+      <p class="muted">Context is what a real twin can see: the weather feed, logged coffee, wearable heart rate and the phone's GPS speed. Without it, every one of these looks like illness or hidden food. Effect sizes for heat, caffeine, intense exercise and stress are assumptions, not fitted to data.</p>
       <p class="verdict good">Across these ${rows.length} incidents the twin cut time in the danger zone (above 250 mg/dL) from ${tot.un} to ${tot.pr} minutes.</p><p class="muted">The false-low case is about avoiding a needless treatment: the risk there is the sugar spike after juice, not the dip.</p>`;
   }
   function exploreHtml(ex) {
@@ -391,22 +424,32 @@ export function initCity(ctx) {
   const weekRows = () => DAYS.map((d, i) => { const key = i + ':' + d.incidents.join(); if (!weekCache[key]) { const base = { ...CITY.usualFor(i), incidents: d.incidents }, { un, pr, det } = protectedRun(base, true); weekCache[key] = { d, i, un, pr, det }; } return weekCache[key]; });
   function weekHtml() {
     const rows = weekRows(), tot = rows.reduce((a, r) => ({ un: a.un + r.un.a250, pr: a.pr + r.pr.a250, al: a.al + r.det.length }), { un: 0, pr: 0, al: 0 });
-    return `<table class="safe"><tr><th>Day</th><th>Alerts</th><th>Minutes above 250<br><small>no twin → twin</small></th><th>In range<br><small>no twin → twin</small></th></tr>${rows.map(r => `<tr><td><button class="lnk" data-goday="${r.i}">${r.d.name.slice(0, 3)}</button> ${esc(r.d.theme)}<br><small>${r.d.incidents.map(k => INCIDENTS[k][0]).join(' ') || 'no incidents'}</small></td><td>${r.det.length}</td><td>${r.un.a250} → <b>${r.pr.a250}</b></td><td>${r.un.tir.toFixed(0)}% → <b>${r.pr.tir.toFixed(0)}%</b></td></tr>`).join('')}</table>
-      <p class="verdict good">Across the week the twin guard raised ${tot.al} warnings and cut minutes in the danger zone (above 250 mg/dL) from ${tot.un} to ${tot.pr}.</p><button class="btn ghost" data-act="csv">Download the week report (CSV)</button>`;
+    return `<table class="safe"><tr><th>Day</th><th>Alerts</th><th>Minutes above 250<br><small>no twin → twin</small></th><th>In range<br><small>no twin → twin</small></th></tr>${rows.map(r => `<tr><td><button class="lnk" data-goday="${r.i}">${r.d.short ? '★' : r.d.name.slice(0, 3)}</button> ${esc(r.d.theme)}<br><small>${r.d.incidents.map(k => INCIDENTS[k][0]).join(' ') || 'no incidents'}</small></td><td>${r.det.length}</td><td>${r.un.a250} → <b>${r.pr.a250}</b></td><td>${r.un.tir.toFixed(0)}% → <b>${r.pr.tir.toFixed(0)}%</b></td></tr>`).join('')}</table>
+      <p class="verdict good">Across the week and the special days the twin guard raised ${tot.al} warnings and cut minutes in the danger zone (above 250 mg/dL) from ${tot.un} to ${tot.pr}.</p><button class="btn ghost" data-act="csv">Download the week report (CSV)</button>`;
   }
   const csv = () => { const rows = weekRows(), head = ['day', 'theme', 'incidents', 'alerts', 'minutes_above_250_without_twin', 'minutes_above_250_with_twin', 'peak_without_twin', 'peak_with_twin', 'time_in_range_without_twin_pct', 'time_in_range_with_twin_pct']; const lines = [head.join(',')].concat(rows.map(r => [r.d.name, `"${r.d.theme}"`, `"${r.d.incidents.join(' ')}"`, r.det.length, r.un.a250, r.pr.a250, Math.round(r.un.peak), Math.round(r.pr.peak), r.un.tir.toFixed(0), r.pr.tir.toFixed(0)].join(','))); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = 'twin-nagar-week-report.csv'; a.click(); };
   function refreshHud() { { const ds = hud.querySelector('[data-hudday]'); if (ds) ds.value = world.plan.day; } { const g = hud.querySelector('[data-sim=guard]'); g.textContent = riskState.guard ? '🛡 Guard ON' : 'Guard OFF'; g.classList.toggle('on', riskState.guard); g.style.display = world.risky ? '' : 'none'; } el.play.textContent = SIM.playing ? '❚❚' : '▶'; hud.querySelector('[data-sim=speed]').textContent = SIM.speed + '×'; const f = hud.querySelector('[data-sim=follow]'); f.setAttribute('aria-pressed', SIM.follow); f.classList.toggle('on', SIM.follow); }
 
   /* ---- per-frame ---- */
-  let phA = 0, lastHud = -1, lastLight = -1, tAcc = 0, lastM = 0;
+  let phA = 0, lastHud = -1, lastLight = -1, lastHot = -1, tAcc = 0, lastM = 0;
   const banner = document.createElement('div'); banner.id = 'banner'; alertsBox.prepend(banner);
   const toast = (msg, cls = '') => { const d = document.createElement('div'); d.className = 'toast ' + cls; d.textContent = msg; toasts.append(d); setTimeout(() => d.classList.add('out'), 11000); setTimeout(() => d.remove(), 11800); };
-  const detMsg = d => d.type === 'unlogged' ? `🛡 Twin guard ${clock(d.t)}: glucose is rising ~${Math.round(d.excess)} mg/dL faster than the logged meals explain, so there is probably unlogged carbohydrate (a snack, sweets or prasad). Plan: log it and take a 20-minute walk now.`
+  const CTX_MSG = {
+    heat: d => `🛡 Twin guard ${clock(d.t)}: glucose is ~${Math.round(d.excess)} mg/dL above what her meals explain, and ${d.why}. Losing water concentrates glucose in the blood, and high glucose makes her lose more water. Plan: drink 500 ml of water with sugar-free ORS now, stay in the shade or AC, and move the evening walk indoors. If she feels dizzy, confused or very thirsty with glucose above 300, go to the City Hospital.`,
+    caffeine: d => `🛡 Twin guard ${clock(d.t)}: this meal is running ~${Math.round(d.excess)} mg/dL above the twin's forecast and ${d.why}. Caffeine lowers insulin sensitivity for several hours. Plan: switch to water or decaf for the rest of the day, skip the 4:30 chai, and take a 15-minute walk after lunch.`,
+    heavyEx: d => `🛡 Twin guard ${clock(d.t)}: glucose rose ~${Math.round(d.excess)} mg/dL during the workout with no food, and ${d.why}. That is adrenaline releasing liver glucose, which is normal for intense exercise and usually settles within an hour. Plan: no extra tablet, no skipped dinner; finish with a 12-minute cool-down and stretch and drink water. Her insulin sensitivity will be higher tonight.`,
+    commute: d => `🛡 Twin guard ${clock(d.t)}: glucose is up ~${Math.round(d.excess)} mg/dL with no food since last night, and ${d.why}. This is stress (adrenaline and cortisol), not hidden carbs. Plan: two minutes of slow breathing now, tell the team she is running late, then a real breakfast (not a vada pav) and a 10-minute walk after the meeting.`,
+  };
+  const detMsg = d => CTX_MSG[d.type] ? CTX_MSG[d.type](d) : d.type === 'unlogged' ? `🛡 Twin guard ${clock(d.t)}: glucose is rising ~${Math.round(d.excess)} mg/dL faster than the logged meals explain, so there is probably unlogged carbohydrate (a snack, sweets or prasad). Plan: log it and take a 20-minute walk now.`
     : d.type === 'drift' ? `🛡 Twin guard ${clock(d.t)}: after eating, Asha's glucose is running ~${Math.round(d.excess)} mg/dL above what her meals explain, so her insulin sensitivity looks much lower than usual (illness, infection or stress?). The twin has re-tuned itself. Plan: go home, hydrate, eat light. If it stays above 250 or she feels very unwell, call the doctor; above 300 or with vomiting or drowsiness, go to the City Hospital.`
     : d.type === 'stuck' ? `🛡 Twin guard ${clock(d.t)}: the CGM has been flat at about ${Math.round(d.reading)} for 40 minutes while the twin expects a big swing (about ${Math.round(d.expected)}), so the sensor is probably frozen. Plan: do a fingerstick now; if it reads above 250 act on it, and go to the City Hospital if above 300 persists or she feels very unwell.`
     : d.type === 'underlog' ? `🛡 Twin guard ${clock(d.t)}: after the ${d.name} Asha's glucose is rising as if she ate about ${Math.round(d.estimate)} g, not the ${Math.round(d.logged)} g she logged. Plan: correct the log and take a 20-minute walk now.`
     : d.type === 'sensor' ? `🛡 Twin guard ${clock(d.t)}: the CGM reads ${Math.round(d.reading)} but the twin expected about ${Math.round(d.expected)} and the drop was abrupt, so this is probably a sensor artifact (lying on the arm). Plan: re-check with a fingerstick before treating; no juice needed.`
     : `🛡 Twin guard ${clock(d.t)}: ${d.name} (about ${Math.round(d.c)} g carbs) is forecast to push glucose into the danger zone. Plan: halve the portion, skip the dessert, take a short walk afterwards.`;
+  // live context signals the twin can see (weather, logged coffee, heart rate, GPS speed, hydration)
+  const ctxChip = (m, i) => { const c = (world.day.context || []).find(c => m >= c.t0 && m <= c.t1); if (!c) return ''; const w = world.water ? ` · water deficit ${(world.water[i] * 100).toFixed(1)}%` : '';
+    const lab = { heat: '🌡 41°C', caffeine: (n => `☕ ${n} coffee${n === 1 ? '' : 's'}`)(world.day.events.filter(e => /^coffee/.test(e.slot) && e.t <= m).length), heavyEx: '❤ 160 bpm', commute: m < hm(8, 25) ? '⏰ running late · ❤ 98 bpm' : m < hm(9, 20) ? '🚕 6 km/h · ❤ 104 bpm' : '📅 9:30 review · ❤ 100 bpm' }[c.type];
+    return `<span class="ctx">${lab}${c.type === 'heat' ? w : ''}</span>`; };
   const v = new THREE.Vector3();
   function maybeAlert(m, gnow) {
     if (!SIM.playing || !fc || fc.pExceed < 0.6 || gnow > THR || m - lastAlert < 150) return;
@@ -475,19 +518,20 @@ export function initCity(ctx) {
     { let msg = '', cls = ''; if (world.risky) { if (gnow > DANGER && !riskState.guard) { cls = 'bad'; msg = `⚠ ${gnow > SEVERE ? 'DANGEROUSLY HIGH' : 'VERY HIGH'}: ${Math.round(gnow)} mg/dL. Nothing is watching Asha's glucose.`; } else if (gnow > DANGER) { cls = 'warn'; msg = `Glucose ${Math.round(gnow)} mg/dL is in the danger zone. The twin guard has already acted and warned; keep following its plan.`; } else if (riskState.guard) { cls = 'ok'; msg = `🛡 Twin guard is on: ${world.det.filter(d => d.t <= m).length} warning${world.det.filter(d => d.t <= m).length === 1 ? '' : 's'} so far.`; } }
       if (banner.textContent !== msg || banner.className !== cls) { banner.textContent = msg; banner.className = cls; } document.body.classList.toggle('danger', cls === 'bad'); }
     // ---- forecast (twin looks 2 h ahead from now, future meals unknown)
-    const k5 = Math.floor(m / 5); if (k5 !== fcAt) { fcAt = k5; const st = stateAt({ events: world.day.events, ex: world.day.ex, th: REAL_D.th, gb, t0: T0, t: Math.floor(m), mult: REAL_D.mult }); fc = forecast({ state: st, base: th, sd, gb }); lastState = st; if (fc) { drawHud(); maybeAlert(m, gnow); } }
+    const k5 = Math.floor(m / 5); if (k5 !== fcAt) { fcAt = k5; const st = stateAt({ events: world.day.events, ex: world.day.ex, th: REAL_D.th, gb, t0: T0, t: Math.floor(m), mult: REAL_D.mult, siFn: world.day.siFn, egpFn: world.day.egpFn, hyd: world.day.hyd }); fc = forecast({ state: st, base: th, sd, gb }); lastState = st; if (fc) { drawHud(); maybeAlert(m, gnow); } }
     if (k5 !== lastHud) {
       lastHud = k5; el.clk.textContent = `Day ${SIM.day} · ${clock(m)}`; el.where.textContent = `${CITY.person.name}: ${seg.label}${ins ? ' · inside ' + zoneOf[ins].name : ''}`;
       el.gl.textContent = Math.round(gnow); el.gl.style.color = zone(gnow); const d15 = gnow - readingAt(m - 15); el.tr.textContent = d15 > 8 ? '↑' : d15 > 3 ? '↗' : d15 < -8 ? '↓' : d15 < -3 ? '↘' : '→';
       el.risk.textContent = fc ? `${Math.round(fc.pExceed * 100)}% chance >180 in 2 h` : ''; el.risk.style.color = fc && fc.pExceed > 0.6 ? '#C9372C' : fc && fc.pExceed > 0.3 ? '#E07A1F' : '#2E9E5B';
-      { const i = clamp(Math.floor(m) - T0, 0, T1 - T0), tr = world.trace; let ok = 0; for (let k = 0; k <= i; k++) if (tr[k] >= 70 && tr[k] <= THR) ok++; const sit = world.cumSit[i]; $('#chips').innerHTML = `<span>🚶 ${Math.round(world.cumSteps[i]).toLocaleString()} steps</span><span>🪑 sitting ${Math.floor(sit / 60)}h${String(Math.round(sit % 60)).padStart(2, '0')}</span><span>🍚 ${Math.round(world.cumCarbs[i])} g carbs</span><span>🎯 in range ${(ok / (i + 1) * 100).toFixed(0)}%</span>${world.risky ? `<span>☠ ${(() => { let d = 0; for (let k = 0; k <= i; k++) if (world.reading[k] > DANGER) d++; return d; })()} min above 250</span>` : ''}<span>⚠ ${alertLog.length} alert${alertLog.length === 1 ? '' : 's'}</span>`; }
+      { const i = clamp(Math.floor(m) - T0, 0, T1 - T0), tr = world.trace; let ok = 0; for (let k = 0; k <= i; k++) if (tr[k] >= 70 && tr[k] <= THR) ok++; const sit = world.cumSit[i]; $('#chips').innerHTML = `<span>🚶 ${Math.round(world.cumSteps[i]).toLocaleString()} steps</span><span>🪑 sitting ${Math.floor(sit / 60)}h${String(Math.round(sit % 60)).padStart(2, '0')}</span><span>🍚 ${Math.round(world.cumCarbs[i])} g carbs</span><span>🎯 in range ${(ok / (i + 1) * 100).toFixed(0)}%</span>${world.risky ? `<span>☠ ${(() => { let d = 0; for (let k = 0; k <= i; k++) if (world.reading[k] > DANGER) d++; return d; })()} min above 250</span>` : ''}<span>⚠ ${alertLog.length} alert${alertLog.length === 1 ? '' : 's'}</span>${ctxChip(Math.floor(m), i)}`; }
       el.note.textContent = `Twin forecast (teal band) assumes no new meals. Orange dots are meals, green bars are walks. ${isUsual(world.plan) ? 'Usual day.' : 'Following your Twin Lab plan.'}`;
     }
     // ---- day/night: sky, sun, and lit windows
     const hr = (m / 60) % 24, day = sstep(5.5, 7.5, hr) * (1 - sstep(18, 19.8, hr));
-    if (Math.abs(day - lastLight) > 0.01) {
-      lastLight = day; sun.intensity = 0.3 + 1.8 * day; hemi.intensity = 0.6 + 0.85 * day; for (const mt of lit) mt.emissiveIntensity = (1 - day) * 1.1 * (mt.userData.k ?? 1);
-      const c = (a, b) => new THREE.Color(a).lerp(new THREE.Color(b), day).getStyle(); document.documentElement.style.setProperty('--sky1', c('#141A33', '#DCE8F5')); document.documentElement.style.setProperty('--sky2', c('#2A2F52', '#EEF1F8'));
+    const hotSky = (world.day.context || []).some(c => c.type === 'heat') ? sstep(hm(10), hm(12), m) * (1 - sstep(hm(18), hm(19, 30), m)) : 0;
+    if (Math.abs(day - lastLight) > 0.01 || Math.abs(hotSky - lastHot) > 0.02) {
+      lastLight = day; lastHot = hotSky; sun.intensity = 0.3 + 1.8 * day; hemi.intensity = 0.6 + 0.85 * day; for (const mt of lit) mt.emissiveIntensity = (1 - day) * 1.1 * (mt.userData.k ?? 1);
+      const c = (a, b) => new THREE.Color(a).lerp(new THREE.Color(b), day).getStyle(); const hot = (col, hc) => new THREE.Color(col).lerp(new THREE.Color(hc), hotSky * 0.7).getStyle(); document.documentElement.style.setProperty('--sky1', hot(c('#141A33', '#DCE8F5'), '#F6C27A')); document.documentElement.style.setProperty('--sky2', hot(c('#2A2F52', '#EEF1F8'), '#FBE3B8'));
     }
     // ---- badge over Asha
     v.set(ashaPos.x, headY + 1.3, ashaPos.z); v.project(camera); const bx = (v.x + 1) / 2 * w, by = (1 - v.y) / 2 * h;
